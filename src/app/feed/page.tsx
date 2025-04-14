@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { Topic } from '@/types'
 import BottomNav from '@/components/BottomNav'
 import { Search, MoreVertical } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSwipeable } from 'react-swipeable'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -57,21 +57,43 @@ const mockTopics: Topic[] = [
 export default function FeedPage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
+  const [isScrolling, setIsScrolling] = useState(false)
   const currentTopic = mockTopics[currentIndex]
 
   const goToNext = () => {
-    if (currentIndex < mockTopics.length - 1) {
+    if (currentIndex < mockTopics.length - 1 && !isScrolling) {
+      setIsScrolling(true)
       setDirection(1)
       setCurrentIndex(currentIndex + 1)
+      setTimeout(() => setIsScrolling(false), 500) // Debounce scrolling
     }
   }
 
   const goToPrevious = () => {
-    if (currentIndex > 0) {
+    if (currentIndex > 0 && !isScrolling) {
+      setIsScrolling(true)
       setDirection(-1)
       setCurrentIndex(currentIndex - 1)
+      setTimeout(() => setIsScrolling(false), 500) // Debounce scrolling
     }
   }
+
+  const handleWheel = useCallback((e: WheelEvent) => {
+    // Detect scroll direction
+    if (e.deltaY > 0) {
+      goToNext()
+    } else if (e.deltaY < 0) {
+      goToPrevious()
+    }
+  }, [currentIndex, isScrolling])
+
+  useEffect(() => {
+    // Add wheel event listener
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    return () => {
+      window.removeEventListener('wheel', handleWheel)
+    }
+  }, [handleWheel])
 
   const handlers = useSwipeable({
     onSwipedLeft: () => goToNext(),
@@ -82,21 +104,16 @@ export default function FeedPage() {
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? 1000 : -1000,
+      x: direction > 0 ? '100%' : '-100%',
       opacity: 0,
-      scale: 0.95,
     }),
     center: {
-      zIndex: 1,
       x: 0,
       opacity: 1,
-      scale: 1,
     },
     exit: (direction: number) => ({
-      zIndex: 0,
-      x: direction < 0 ? 1000 : -1000,
+      x: direction < 0 ? '100%' : '-100%',
       opacity: 0,
-      scale: 0.95,
     }),
   }
 
@@ -131,9 +148,8 @@ export default function FeedPage() {
               animate="center"
               exit="exit"
               transition={{
-                x: { type: "spring", stiffness: 300, damping: 30 },
+                x: { type: "spring", stiffness: 200, damping: 25 },
                 opacity: { duration: 0.2 },
-                scale: { duration: 0.2 },
               }}
               className="absolute inset-0 px-3"
               drag="x"

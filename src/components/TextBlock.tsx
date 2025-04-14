@@ -9,7 +9,7 @@ export default function TextBlock({ content }: TextBlockProps) {
   const isTitle = paragraphs.length > 1 && paragraphs[0].includes('?');
 
   return (
-    <div className="relative h-screen w-full bg-black flex items-center justify-center">
+    <div className="relative h-screen w-full flex items-center justify-center">
       <div className="w-full max-w-lg px-6">
         <div className="prose prose-invert max-w-none">
           {paragraphs.map((paragraph, index) => {
@@ -17,15 +17,15 @@ export default function TextBlock({ content }: TextBlockProps) {
             if (paragraph.includes('\n1.')) {
               const [intro, ...items] = paragraph.split('\n');
               return (
-                <div key={index} className="mb-8">
-                  <p className="text-xl text-white/90 leading-relaxed mb-4 font-light">
+                <div key={index} className="mb-6">
+                  <p className="text-lg text-white/90 leading-relaxed mb-3 font-light">
                     {intro}
                   </p>
-                  <ul className="space-y-3">
+                  <ul className="space-y-2">
                     {items.map((item, i) => (
                       <li 
                         key={i} 
-                        className="flex items-start text-xl text-white/90 leading-relaxed font-light"
+                        className="flex items-start text-lg text-white/90 leading-relaxed font-light"
                       >
                         <span className="text-primary mr-2">{item.split('.')[0]}.</span>
                         <span>{item.split('.')[1]}</span>
@@ -41,7 +41,7 @@ export default function TextBlock({ content }: TextBlockProps) {
               return (
                 <h1 
                   key={index} 
-                  className="text-4xl font-bold text-white mb-8 leading-tight"
+                  className="text-4xl font-bold text-white mb-6 leading-tight"
                 >
                   {paragraph}
                 </h1>
@@ -52,7 +52,7 @@ export default function TextBlock({ content }: TextBlockProps) {
             return (
               <p 
                 key={index} 
-                className="text-xl text-white/90 leading-relaxed mb-6 font-light"
+                className="text-lg text-white/90 leading-relaxed mb-4 font-light"
               >
                 {paragraph}
               </p>

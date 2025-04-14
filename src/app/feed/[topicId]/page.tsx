@@ -6,6 +6,9 @@ import QuestionBlock from '@/components/QuestionBlock'
 import BottomNav from '@/components/BottomNav'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { useSwipeable } from 'react-swipeable'
 
 // This would be replaced with actual data fetching
 const mockTopic: Topic = {
@@ -42,6 +45,65 @@ const mockTopic: Topic = {
 }
 
 export default function TopicPage({ params }: { params: { topicId: string } }) {
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [direction, setDirection] = useState(0)
+  const [isScrolling, setIsScrolling] = useState(false)
+
+  const goToNext = () => {
+    if (currentIndex < mockTopic.reels.length - 1 && !isScrolling) {
+      setIsScrolling(true)
+      setDirection(1)
+      setCurrentIndex(currentIndex + 1)
+      setTimeout(() => setIsScrolling(false), 300)
+    }
+  }
+
+  const goToPrevious = () => {
+    if (currentIndex > 0 && !isScrolling) {
+      setIsScrolling(true)
+      setDirection(-1)
+      setCurrentIndex(currentIndex - 1)
+      setTimeout(() => setIsScrolling(false), 300)
+    }
+  }
+
+  const handlers = useSwipeable({
+    onSwipedUp: () => goToNext(),
+    onSwipedDown: () => goToPrevious(),
+    trackMouse: false,
+    preventScrollOnSwipe: true,
+  })
+
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      if (Math.abs(e.deltaY) > 20) { // Add threshold to prevent accidental scrolls
+        if (e.deltaY > 0) {
+          goToNext()
+        } else {
+          goToPrevious()
+        }
+      }
+    }
+
+    window.addEventListener('wheel', handleWheel, { passive: true })
+    return () => window.removeEventListener('wheel', handleWheel)
+  }, [currentIndex, isScrolling])
+
+  const variants = {
+    enter: (direction: number) => ({
+      y: direction > 0 ? '100%' : '-100%',
+      opacity: 0,
+    }),
+    center: {
+      y: 0,
+      opacity: 1,
+    },
+    exit: (direction: number) => ({
+      y: direction < 0 ? '100%' : '-100%',
+      opacity: 0,
+    }),
+  }
+
   return (
     <>
       {/* Back button */}
@@ -52,24 +114,38 @@ export default function TopicPage({ params }: { params: { topicId: string } }) {
         <ChevronLeft className="w-6 h-6 text-white" />
       </Link>
 
-      <main className="snap-y snap-mandatory h-screen w-full overflow-y-scroll pb-16">
-        {mockTopic.reels.map((reel, index) => (
-          <div key={index} className="snap-start snap-always h-screen w-full">
-            {reel.type === 'text' ? (
-              <TextBlock content={reel.content} />
-            ) : (
-              <QuestionBlock
-                question={reel.question}
-                options={reel.options}
-                correctAnswer={reel.correctAnswer}
-                explanation={reel.explanation}
-              />
-            )}
-          </div>
-        ))}
-      </main>
+      <div className="fixed inset-0 bg-black">
+        <main className="h-screen w-full overflow-hidden" {...handlers}>
+          <AnimatePresence initial={false} custom={direction} mode="popLayout">
+            <motion.div
+              key={currentIndex}
+              custom={direction}
+              variants={variants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              transition={{
+                y: { type: "spring", stiffness: 300, damping: 40, restDelta: 0.01 },
+                opacity: { duration: 0.15 },
+              }}
+              className="absolute inset-0 w-full h-full"
+            >
+              {mockTopic.reels[currentIndex].type === 'text' ? (
+                <TextBlock content={mockTopic.reels[currentIndex].content} />
+              ) : (
+                <QuestionBlock
+                  question={mockTopic.reels[currentIndex].question}
+                  options={mockTopic.reels[currentIndex].options}
+                  correctAnswer={mockTopic.reels[currentIndex].correctAnswer}
+                  explanation={mockTopic.reels[currentIndex].explanation}
+                />
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </main>
 
-      <BottomNav />
+        <BottomNav />
+      </div>
     </>
   )
 } 

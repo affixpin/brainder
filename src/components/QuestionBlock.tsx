@@ -25,13 +25,13 @@ export default function QuestionBlock({
   };
 
   return (
-    <div className="relative h-screen w-full bg-black flex items-center justify-center">
+    <div className="relative h-screen w-full flex items-center justify-center">
       {/* Main content */}
       <div className="w-full max-w-lg px-6">
-        <h2 className="text-3xl font-bold text-white mb-8 leading-tight">
+        <h2 className="text-3xl font-bold text-white mb-6 leading-tight">
           {question}
         </h2>
-        <div className="space-y-4">
+        <div className="space-y-3">
           {options.map((option, index) => {
             const isSelected = selectedAnswer === index;
             const isCorrect = index === correctAnswer;
@@ -43,7 +43,7 @@ export default function QuestionBlock({
                 onClick={() => handleAnswerSelect(index)}
                 disabled={showExplanation}
                 className={`
-                  w-full p-5 rounded-xl text-left transition-all flex items-center justify-between
+                  w-full p-4 rounded-xl text-left transition-all flex items-center justify-between
                   ${showResult
                     ? isCorrect
                       ? 'bg-green-500/20 border-2 border-green-500'
@@ -63,12 +63,12 @@ export default function QuestionBlock({
           })}
         </div>
         {showExplanation && (
-          <div className="mt-8 p-6 rounded-xl bg-white/10 border border-white/20">
-            <p className="text-lg text-white/90 leading-relaxed">
+          <div className="mt-6 p-4 rounded-xl bg-white/10 border border-white/20">
+            <p className="text-base text-white/90 leading-relaxed">
               {selectedAnswer === correctAnswer ? (
-                <span className="text-green-500 font-semibold block mb-2">Correct! </span>
+                <span className="text-green-500 font-semibold block mb-1">Correct! </span>
               ) : (
-                <span className="text-red-500 font-semibold block mb-2">Not quite. </span>
+                <span className="text-red-500 font-semibold block mb-1">Not quite. </span>
               )}
               {explanation}
             </p>
