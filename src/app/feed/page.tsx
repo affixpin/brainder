@@ -5,8 +5,9 @@ import { Topic } from '@/types'
 import BottomNav from '@/components/BottomNav'
 import { Search, MoreVertical } from 'lucide-react'
 import { useState, useCallback, useEffect } from 'react'
-import { useSwipeable } from 'react-swipeable'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useSwipeable } from 'react-swipeable'
+import { useRouter } from 'next/navigation'
 
 // This would be replaced with actual data fetching
 const mockTopics: Topic[] = [
@@ -55,9 +56,11 @@ const mockTopics: Topic[] = [
 ]
 
 export default function FeedPage() {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const currentTopic = mockTopics[currentIndex]
 
   const goToNext = () => {
@@ -65,7 +68,6 @@ export default function FeedPage() {
       setIsScrolling(true)
       setDirection(1)
       setCurrentIndex(currentIndex + 1)
-      setTimeout(() => setIsScrolling(false), 500) // Debounce scrolling
     }
   }
 
@@ -74,54 +76,78 @@ export default function FeedPage() {
       setIsScrolling(true)
       setDirection(-1)
       setCurrentIndex(currentIndex - 1)
-      setTimeout(() => setIsScrolling(false), 500) // Debounce scrolling
     }
   }
 
+  const onAnimationComplete = () => {
+    setIsScrolling(false)
+  }
+
   const handleWheel = useCallback((e: WheelEvent) => {
-    // Detect scroll direction
-    if (e.deltaY > 0) {
-      goToNext()
-    } else if (e.deltaY < 0) {
-      goToPrevious()
+    if (Math.abs(e.deltaY) > 5) { // Reduced threshold for more responsive scrolling
+      if (e.deltaY > 0) {
+        goToNext()
+      } else {
+        goToPrevious()
+      }
     }
   }, [currentIndex, isScrolling])
 
   useEffect(() => {
-    // Add wheel event listener
     window.addEventListener('wheel', handleWheel, { passive: true })
-    return () => {
-      window.removeEventListener('wheel', handleWheel)
-    }
+    return () => window.removeEventListener('wheel', handleWheel)
   }, [handleWheel])
 
   const handlers = useSwipeable({
-    onSwipedLeft: () => goToNext(),
-    onSwipedRight: () => goToPrevious(),
-    trackMouse: true,
+    onSwipedUp: () => goToNext(),
+    onSwipedDown: () => goToPrevious(),
+    trackMouse: false,
     preventScrollOnSwipe: true,
+    swipeDuration: 250, // Reduced from default for faster response
   })
+
+  const handleTopicClick = (e: React.MouseEvent, topicId: string) => {
+    e.preventDefault();
+    if (Math.abs((e.target as any).offsetY) > 10) {
+      return;
+    }
+    
+    setIsTransitioning(true);
+    router.push(`/feed/${topicId}`);
+  };
 
   const variants = {
     enter: (direction: number) => ({
-      x: direction > 0 ? '100%' : '-100%',
+      y: direction > 0 ? window.innerHeight : -window.innerHeight,
       opacity: 0,
+      x: 0
     }),
     center: {
-      x: 0,
+      y: 0,
       opacity: 1,
+      x: 0
     },
     exit: (direction: number) => ({
-      x: direction < 0 ? '100%' : '-100%',
-      opacity: 0,
-    }),
+      y: isTransitioning ? 0 : direction < 0 ? window.innerHeight : -window.innerHeight,
+      opacity: isTransitioning ? 1 : 0,
+      x: isTransitioning ? -window.innerWidth : 0
+    })
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <motion.div
+      key="feed-page"
+      initial={{ x: isTransitioning ? 0 : -window.innerWidth }}
+      animate={{ x: 0 }}
+      exit={{ x: window.innerWidth }}
+      transition={{
+        x: { type: "tween", duration: 0.2, ease: "easeInOut" }
+      }}
+      className="fixed inset-0 bg-black"
+    >
       {/* Search header */}
-      <div className="sticky top-0 bg-black/95 backdrop-blur-sm border-b border-white/10 px-3 py-2.5 z-50">
-        <div className="flex items-center gap-2 max-w-xl mx-auto">
+      <div className="absolute top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 px-3 py-2.5 z-50">
+        <div className="flex items-center gap-2 max-w-lg mx-auto">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
             <input
@@ -136,53 +162,52 @@ export default function FeedPage() {
         </div>
       </div>
 
-      {/* Full screen card */}
-      <div className="flex-1 flex items-center justify-center overflow-hidden py-4">
-        <div className="relative w-full h-[calc(100vh-9.5rem)]" {...handlers}>
-          <AnimatePresence initial={false} custom={direction}>
-            <motion.div
-              key={currentIndex}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                x: { type: "spring", stiffness: 200, damping: 25 },
-                opacity: { duration: 0.2 },
-              }}
-              className="absolute inset-0 px-3"
-              drag="x"
-              dragConstraints={{ left: 0, right: 0 }}
-              dragElastic={1}
-              onDragEnd={(e, { offset, velocity }) => {
-                const swipe = Math.abs(offset.x) * velocity.x;
-                if (swipe < -100) goToNext();
-                if (swipe > 100) goToPrevious();
-              }}
+      {/* Main content */}
+      <main className="h-screen w-full flex items-center justify-center overflow-hidden" {...handlers}>
+        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+          <motion.div
+            key={currentIndex}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            onAnimationComplete={onAnimationComplete}
+            transition={{
+              y: { type: "tween", duration: 0.3, ease: "easeInOut" },
+              opacity: { duration: 0.15 }
+            }}
+            className="w-full max-w-lg px-6 absolute"
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.7}
+            onDragEnd={(e, { offset, velocity }) => {
+              const swipe = Math.abs(offset.y) * velocity.y;
+              if (swipe > 50) goToPrevious();
+              if (swipe < -50) goToNext();
+            }}
+          >
+            <div
+              className="block cursor-pointer"
+              onClick={(e) => handleTopicClick(e, currentTopic.id)}
             >
-              <Link
-                href={`/feed/${currentTopic.id}`}
-                className="block bg-[#222222] rounded-3xl h-full mx-auto max-w-xl flex flex-col justify-center text-center"
-              >
-                <div className="px-6 py-16 md:px-8">
-                  <span className="text-sm text-white/50 font-medium block mb-8">
-                    {currentTopic.category}
-                  </span>
-                  <h3 className="text-[2.5rem] md:text-5xl font-bold text-white leading-tight mb-8">
-                    {currentTopic.title}
-                  </h3>
-                  <p className="text-lg text-white/70 leading-relaxed max-w-md mx-auto">
-                    {currentTopic.teaser}
-                  </p>
-                </div>
-              </Link>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-      </div>
+              <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
+                {currentTopic.title}
+              </h1>
+              <div className="space-y-4">
+                <span className="text-lg text-white/50 font-medium block">
+                  {currentTopic.category}
+                </span>
+                <p className="text-lg text-white/90 leading-relaxed font-light">
+                  {currentTopic.teaser}
+                </p>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </main>
 
       <BottomNav />
-    </div>
+    </motion.div>
   );
 } 

@@ -9,6 +9,7 @@ import { ChevronLeft } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSwipeable } from 'react-swipeable'
+import { useRouter } from 'next/navigation'
 
 // This would be replaced with actual data fetching
 const mockTopic: Topic = {
@@ -45,16 +46,21 @@ const mockTopic: Topic = {
 }
 
 export default function TopicPage({ params }: { params: { topicId: string } }) {
+  const router = useRouter();
   const [currentIndex, setCurrentIndex] = useState(0)
   const [direction, setDirection] = useState(0)
   const [isScrolling, setIsScrolling] = useState(false)
+  const [isExiting, setIsExiting] = useState(false)
+
+  useEffect(() => {
+    setIsExiting(false)
+  }, [])
 
   const goToNext = () => {
     if (currentIndex < mockTopic.reels.length - 1 && !isScrolling) {
       setIsScrolling(true)
       setDirection(1)
       setCurrentIndex(currentIndex + 1)
-      setTimeout(() => setIsScrolling(false), 300)
     }
   }
 
@@ -63,8 +69,11 @@ export default function TopicPage({ params }: { params: { topicId: string } }) {
       setIsScrolling(true)
       setDirection(-1)
       setCurrentIndex(currentIndex - 1)
-      setTimeout(() => setIsScrolling(false), 300)
     }
+  }
+
+  const onAnimationComplete = () => {
+    setIsScrolling(false)
   }
 
   const handlers = useSwipeable({
@@ -72,11 +81,12 @@ export default function TopicPage({ params }: { params: { topicId: string } }) {
     onSwipedDown: () => goToPrevious(),
     trackMouse: false,
     preventScrollOnSwipe: true,
+    swipeDuration: 250,
   })
 
   useEffect(() => {
     const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > 20) { // Add threshold to prevent accidental scrolls
+      if (Math.abs(e.deltaY) > 5) {
         if (e.deltaY > 0) {
           goToNext()
         } else {
@@ -89,63 +99,88 @@ export default function TopicPage({ params }: { params: { topicId: string } }) {
     return () => window.removeEventListener('wheel', handleWheel)
   }, [currentIndex, isScrolling])
 
-  const variants = {
+  const handleBackClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsExiting(true);
+    router.push('/feed');
+  };
+
+  const contentVariants = {
     enter: (direction: number) => ({
-      y: direction > 0 ? '100%' : '-100%',
-      opacity: 0,
+      y: direction > 0 ? window.innerHeight : -window.innerHeight,
+      opacity: 0
     }),
     center: {
       y: 0,
-      opacity: 1,
+      opacity: 1
     },
     exit: (direction: number) => ({
-      y: direction < 0 ? '100%' : '-100%',
-      opacity: 0,
-    }),
+      y: direction < 0 ? window.innerHeight : -window.innerHeight,
+      opacity: 0
+    })
   }
 
   return (
-    <>
+    <motion.div
+      key="topic-page"
+      initial={{ x: window.innerWidth }}
+      animate={{ x: 0 }}
+      exit={{ x: -window.innerWidth }}
+      transition={{
+        x: { type: "tween", duration: 0.2, ease: "easeInOut" }
+      }}
+      className="fixed inset-0 bg-black"
+    >
       {/* Back button */}
-      <Link 
-        href="/feed"
+      <button 
+        onClick={handleBackClick}
         className="fixed top-4 left-4 z-50 w-10 h-10 rounded-full bg-black/50 flex items-center justify-center"
       >
         <ChevronLeft className="w-6 h-6 text-white" />
-      </Link>
+      </button>
 
-      <div className="fixed inset-0 bg-black">
-        <main className="h-screen w-full overflow-hidden" {...handlers}>
-          <AnimatePresence initial={false} custom={direction} mode="popLayout">
-            <motion.div
-              key={currentIndex}
-              custom={direction}
-              variants={variants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{
-                y: { type: "spring", stiffness: 300, damping: 40, restDelta: 0.01 },
-                opacity: { duration: 0.15 },
-              }}
-              className="absolute inset-0 w-full h-full"
-            >
-              {mockTopic.reels[currentIndex].type === 'text' ? (
-                <TextBlock content={mockTopic.reels[currentIndex].content} />
-              ) : (
-                <QuestionBlock
-                  question={mockTopic.reels[currentIndex].question}
-                  options={mockTopic.reels[currentIndex].options}
-                  correctAnswer={mockTopic.reels[currentIndex].correctAnswer}
-                  explanation={mockTopic.reels[currentIndex].explanation}
-                />
-              )}
-            </motion.div>
-          </AnimatePresence>
-        </main>
+      <main 
+        className="h-screen w-full overflow-hidden" 
+        {...handlers}
+      >
+        <AnimatePresence initial={false} custom={direction} mode="popLayout">
+          <motion.div
+            key={currentIndex}
+            custom={direction}
+            variants={contentVariants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            onAnimationComplete={onAnimationComplete}
+            transition={{
+              y: { type: "tween", duration: 0.3, ease: "easeInOut" },
+              opacity: { duration: 0.15 }
+            }}
+            className="absolute inset-0 w-full h-full"
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={0.7}
+            onDragEnd={(e, { offset, velocity }) => {
+              const swipe = Math.abs(offset.y) * velocity.y;
+              if (swipe > 50) goToPrevious();
+              if (swipe < -50) goToNext();
+            }}
+          >
+            {mockTopic.reels[currentIndex].type === 'text' ? (
+              <TextBlock content={mockTopic.reels[currentIndex].content} />
+            ) : (
+              <QuestionBlock
+                question={mockTopic.reels[currentIndex].question}
+                options={mockTopic.reels[currentIndex].options}
+                correctAnswer={mockTopic.reels[currentIndex].correctAnswer}
+                explanation={mockTopic.reels[currentIndex].explanation}
+              />
+            )}
+          </motion.div>
+        </AnimatePresence>
+      </main>
 
-        <BottomNav />
-      </div>
-    </>
+      <BottomNav />
+    </motion.div>
   )
 } 
