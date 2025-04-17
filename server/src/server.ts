@@ -72,6 +72,19 @@ async function generateContent(systemPrompt: string, userPrompt: string): Promis
   }
 }
 
+// Function to clean up AI response by removing markdown code block syntax
+function cleanJsonResponse(response: string): string {
+  // Remove markdown code block syntax if present
+  let cleaned = response.replace(/```json\n/g, '');
+  cleaned = cleaned.replace(/```\n/g, '');
+  cleaned = cleaned.replace(/```/g, '');
+  
+  // Trim whitespace
+  cleaned = cleaned.trim();
+  
+  return cleaned;
+}
+
 // GET /feed endpoint
 app.get('/feed', async (req: Request, res: Response) => {
   try {
@@ -82,23 +95,15 @@ app.get('/feed', async (req: Request, res: Response) => {
       throw new Error('Failed to generate content');
     }
 
-    // Parse the generated content into the expected format
-    const facts = content.split('\n\n').filter((fact: string) => fact.trim());
-    const topics: Topic[] = facts.map((fact: string, index: number) => {
-      const [categoryLine, ...contentLines] = fact.split('\n');
-      const category = categoryLine.replace('[', '').split(']:')[0];
-      const title = categoryLine.split(']:')[1]?.trim() || '';
-      const teaser = contentLines.join('\n').trim();
-      
-      return {
-        id: String(index + 1),
-        category,
-        title,
-        teaser
-      };
-    });
-
-    res.json(topics);
+    // Clean and parse the JSON response
+    try {
+      const cleanedContent = cleanJsonResponse(content);
+      const topics = JSON.parse(cleanedContent);
+      res.json(topics);
+    } catch (error) {
+      console.error('Error parsing JSON response:', error);
+      res.status(500).json({ error: 'Failed to parse AI response' });
+    }
   } catch (error) {
     res.status(500).json({ error: 'Failed to generate feed content' });
   }
@@ -124,62 +129,35 @@ app.get('/topic', async (req: Request, res: Response) => {
       throw new Error('Failed to generate content');
     }
 
-    // Parse the generated content into reels format
-    const reels: Reel[] = content.split('\n\n').map((section: string) => {
-      if (section.includes('?')) {
-        // This is a question
-        const [question, ...options] = section.split('\n');
-        const correctAnswer = parseInt(options.pop() || '0');
-        const explanation = options.pop() || '';
-        
-        return {
-          type: 'question',
-          question: question.trim(),
-          options: options.map((opt: string) => opt.trim().replace(/^[*-] /, '')),
-          correctAnswer,
-          explanation: explanation.trim()
-        };
-      } else {
-        // This is a text block
-        return {
-          type: 'text',
-          content: section.trim()
-        };
-      }
-    });
-
-    res.json(reels);
+    // Clean and parse the JSON response
+    try {
+      const cleanedContent = cleanJsonResponse(content);
+      const reels = JSON.parse(cleanedContent);
+      res.json(reels);
+    } catch (error) {
+      console.error('Error parsing JSON response:', error);
+      res.status(500).json({ error: 'Failed to parse AI response' });
+    }
   } catch (error) {
     console.error('Error in /topic endpoint:', error);
     res.status(500).json({ error: 'Failed to generate topic content' });
   }
 });
 
-// GET /similar-topics endpoint
-app.get('/similar-topics', async (req: Request, res: Response) => {
+// POST /similar-topics endpoint
+app.post('/similar-topics', async (req: Request, res: Response) => {
   try {
-    const topicListParam = req.query.viewed as string;
+    const { viewed } = req.body;
     
-    if (!topicListParam) {
-      return res.status(400).json({ error: 'Topic list is required' });
-    }
-    
-    // Parse the topic list from the query parameter
-    let topicList: string[];
-    try {
-      topicList = JSON.parse(topicListParam);
-      if (!Array.isArray(topicList)) {
-        return res.status(400).json({ error: 'Topic list must be an array' });
-      }
-    } catch (e) {
-      return res.status(400).json({ error: 'Invalid topic list format' });
+    if (!viewed || !Array.isArray(viewed)) {
+      return res.status(400).json({ error: 'Topic list must be provided as an array in the "viewed" field' });
     }
     
     const systemPrompt = await readPromptFile(2);
     
     // Create user prompt with the topic list
-    const topicListText = topicList.map(topic => `- ${topic}`).join('\n');
-    const userPrompt = `Previously completed topics:\n${topicListText}`;
+    const topicListText = viewed.map(topic => `- ${topic}`).join('\n');
+    const userPrompt = `Previously completed facts:\n${topicListText}`;
     
     const content = await generateContent(systemPrompt, userPrompt);
     
@@ -187,18 +165,15 @@ app.get('/similar-topics', async (req: Request, res: Response) => {
       throw new Error('Failed to generate content');
     }
 
-    // Parse the generated content into similar topics format
-    const topics: Topic[] = content.split('\n\n').map((topic: string, index: number) => {
-      const [title, teaser] = topic.split('\n');
-      return {
-        id: String(index + 1),
-        title: title.trim(),
-        teaser: teaser?.trim() || '',
-        category: 'Related Topics'
-      };
-    });
-
-    res.json(topics);
+    // Clean and parse the JSON response
+    try {
+      const cleanedContent = cleanJsonResponse(content);
+      const topics = JSON.parse(cleanedContent);
+      res.json(topics);
+    } catch (error) {
+      console.error('Error parsing JSON response:', error);
+      res.status(500).json({ error: 'Failed to parse AI response' });
+    }
   } catch (error) {
     console.error('Error in /similar-topics endpoint:', error);
     res.status(500).json({ error: 'Failed to generate similar topics' });

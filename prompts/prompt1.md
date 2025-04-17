@@ -18,19 +18,44 @@ You are an expert science communicator and educator. Your task is to generate a 
    - After each question, include the correct answer and a brief explanation.
 
 ### Input:
-Topic: [Topic Name]
+Topic: {TOPIC_NAME}
 
-### Output:
-**Microcourse:**  
-[Block 1]  
-[Block 2]  
-...  
-[Block N]
+### Output Format:
+Return your response as a valid JSON array of objects with the following structure:
 
-**Quiz:**  
-1. [Question]  
-A) ...  
-B) ...  
-C) ...  
-**Correct Answer:** ...  
-**Explanation:** ...
+```json
+[
+  {
+    "type": "text",
+    "content": "First explanatory block content."
+  },
+  {
+    "type": "text",
+    "content": "Second explanatory block content."
+  },
+  {
+    "type": "question",
+    "question": "First quiz question?",
+    "options": [
+      "Option A",
+      "Option B",
+      "Option C"
+    ],
+    "correctAnswer": 1,
+    "explanation": "Explanation of why this is the correct answer."
+  },
+  {
+    "type": "question",
+    "question": "Second quiz question?",
+    "options": [
+      "Option A",
+      "Option B",
+      "Option C"
+    ],
+    "correctAnswer": 2,
+    "explanation": "Explanation of why this is the correct answer."
+  }
+]
+```
+
+Make sure your response is ONLY the JSON array with no additional text before or after it.
