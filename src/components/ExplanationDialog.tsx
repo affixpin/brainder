@@ -166,7 +166,6 @@ export default function ExplanationDialog({ isOpen, onClose, fact, language }: E
           </h2>
           <button
             onClick={onClose}
-            disabled={isLoading}
             className={`text-gray-400 hover:text-gray-200 transition-colors p-1 ${
               isLoading ? 'opacity-50 cursor-not-allowed' : ''
             }`}
