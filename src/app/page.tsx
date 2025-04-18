@@ -100,7 +100,7 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="min-h-screen py-4 sm:py-8 md:py-12">
+      <div className="py-4 sm:py-8 md:py-12">
         <div className="max-w-2xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="text-center">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
