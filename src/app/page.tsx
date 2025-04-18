@@ -10,6 +10,23 @@ type Message = {
 };
 
 const LANGUAGES = ['Українська', 'English', 'Русский'];
+const QUICK_INTERESTS = [
+  'Space',
+  'Biology',
+  'Physics',
+  'Psychology',
+  'Neuroscience',
+  'Astronomy',
+  'Climate',
+  'Dinosaurs',
+  'Human Body',
+  'Technology',
+  'IT',
+  'Mathematics',
+  'Medicine',
+  'AI',
+  'Animals'
+];
 
 export default function Home() {
   const [error, setError] = useState<string | null>(null);
@@ -17,6 +34,9 @@ export default function Home() {
   const [messageHistory, setMessageHistory] = useState<Message[]>([]);
   const [language, setLanguage] = useState('Українська');
   const [isLoading, setIsLoading] = useState(false);
+  const [interest, setInterest] = useState('');
+  const [tempInterest, setTempInterest] = useState('');
+  const [isInterestModified, setIsInterestModified] = useState(false);
   const initialRequestMade = useRef(false);
 
   const generateFact = async (message: string, selectedLanguage = language) => {
@@ -35,7 +55,8 @@ export default function Home() {
         },
         body: JSON.stringify({
           messages: updatedHistory,
-          language: selectedLanguage
+          language: selectedLanguage,
+          interest: interest
         }),
       });
 
@@ -84,11 +105,32 @@ export default function Home() {
     generateFact('I DO NOT like this fact');
   };
 
+  const handleInterestChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTempInterest(e.target.value);
+    setIsInterestModified(true);
+  };
+
+  const handleSetInterest = () => {
+    setInterest(tempInterest);
+    setIsInterestModified(false);
+    if (tempInterest) {
+      generateFact(`Generate an interesting science fact about ${tempInterest}`);
+    }
+  };
+
   const handleLanguageChange = async (newLanguage: string) => {
     if (newLanguage === language || isLoading) return;
     setLanguage(newLanguage);
     setMessageHistory([]);
-    generateFact('Generate an interesting science fact', newLanguage);
+    const message = interest 
+      ? `Generate an interesting science fact about ${interest}`
+      : 'Generate an interesting science fact';
+    generateFact(message, newLanguage);
+  };
+
+  const handleQuickInterest = (interest: string) => {
+    setTempInterest(interest);
+    setIsInterestModified(true);
   };
 
   useEffect(() => {
@@ -131,13 +173,53 @@ export default function Home() {
             {error ? (
               <div className="text-red-400 text-center">{error}</div>
             ) : (
-              <FactCard
-                fact={currentFact}
-                onLike={handleLike}
-                onDislike={handleDislike}
-                language={language}
-                isLoading={isLoading}
-              />
+              <div className="w-full max-w-2xl mx-auto">
+                <FactCard
+                  fact={currentFact}
+                  onLike={handleLike}
+                  onDislike={handleDislike}
+                  language={language}
+                  isLoading={isLoading}
+                />
+                <div className="mt-4 px-2 sm:px-6 lg:px-8">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={tempInterest}
+                      onChange={handleInterestChange}
+                      placeholder="Enter your interest (e.g., space, biology)"
+                      className="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-blue-500"
+                      disabled={isLoading}
+                    />
+                    <button
+                      onClick={handleSetInterest}
+                      disabled={!isInterestModified || isLoading}
+                      className={`whitespace-nowrap px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
+                        isInterestModified && !isLoading
+                          ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+                          : 'bg-gray-800 text-gray-400 cursor-not-allowed'
+                      }`}
+                    >
+                      Set
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                    {QUICK_INTERESTS.map((interest) => (
+                      <button
+                        key={interest}
+                        onClick={() => handleQuickInterest(interest)}
+                        className={`px-3 py-1 text-sm rounded-full transition-all duration-200 
+                          ${isLoading 
+                            ? 'bg-gray-800 text-gray-300 opacity-75' 
+                            : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-600'
+                          }`}
+                      >
+                        {interest}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
