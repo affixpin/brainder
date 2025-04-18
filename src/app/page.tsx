@@ -203,12 +203,12 @@ export default function Home() {
                       Set
                     </button>
                   </div>
-                  <div className="mt-8 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:justify-center sm:gap-2">
+                  <div className="mt-8 flex flex-wrap justify-center gap-2 w-fit mx-auto">
                     {QUICK_INTERESTS.map((interest) => (
                       <button
                         key={interest}
                         onClick={() => handleQuickInterest(interest)}
-                        className={`w-full sm:w-auto px-3 py-1.5 text-sm rounded-full transition-all duration-200 
+                        className={`px-3 py-1.5 text-sm rounded-full transition-all duration-200 
                           ${isLoading 
                             ? 'bg-gray-800 text-gray-300 opacity-75' 
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-600'
