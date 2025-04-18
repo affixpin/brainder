@@ -1,4 +1,4 @@
-import { Message, streamContent } from '@/lib/openai';
+import { Message, streamChatContent } from '@/lib/chat';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     ];
 
     // Create a stream for the OpenAI response
-    const stream = streamContent(messages);
+    const stream = streamChatContent(messages);
 
     // Return the stream response
     return new Response(stream, {

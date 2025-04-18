@@ -117,23 +117,23 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
     try {
-      // Add empty assistant message that will be streamed
-      setMessages(prev => [...prev, { role: 'assistant', content: '', isStreaming: true }]);
-
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topicId: topic.id,
+          topic,
           message: userMessage,
-          history: messages.slice(0, -1), // Exclude the empty message we just added
+          history: messages,
         }),
       });
 
       if (!response.ok) throw new Error('Failed to get response');
       if (!response.body) throw new Error('No response body');
+
+      // Add empty assistant message that will be streamed
+      setMessages(prev => [...prev, { role: 'assistant', content: '', isStreaming: true }]);
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -232,11 +232,11 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
             ))}
             {isLoading && (
               <div className="flex justify-start">
-                <div className="bg-white/10 rounded-2xl px-4 py-2 rounded-bl-sm">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-white/50 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-white/50 rounded-full animate-bounce delay-100" />
-                    <div className="w-2 h-2 bg-white/50 rounded-full animate-bounce delay-200" />
+                <div className="bg-white/10 rounded-2xl px-6 py-4 rounded-bl-sm min-w-[120px]">
+                  <div className="flex items-center space-x-2">
+                    <div className="w-3 h-3 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-3 h-3 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-3 h-3 bg-white/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
                 </div>
               </div>

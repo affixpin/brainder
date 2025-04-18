@@ -1,28 +1,18 @@
 import { NextResponse } from 'next/server';
-import { readPromptFile, generateContent, cleanJsonResponse } from '@/lib/openai';
-import { Topic } from '@/types/api';
+import { streamFeedContent } from '@/lib/feed';
+import { readPromptFile } from '@/lib/openai';
 
 export async function GET() {
   try {
     const systemPrompt = await readPromptFile(0);
-    const content = await generateContent(systemPrompt, "Generate content based on the instructions in the system prompt.");
-    
-    if (!content) {
-      throw new Error('Failed to generate content');
-    }
+    const stream = await streamFeedContent(systemPrompt);
 
-    // Clean and parse the JSON response
-    try {
-      const cleanedContent = cleanJsonResponse(content);
-      const topics: Topic[] = JSON.parse(cleanedContent);
-      return NextResponse.json(topics);
-    } catch (error) {
-      console.error('Error parsing JSON response:', error);
-      return NextResponse.json(
-        { error: 'Failed to parse AI response' },
-        { status: 500 }
-      );
-    }
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+      },
+    });
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to generate feed content' },

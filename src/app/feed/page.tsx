@@ -9,7 +9,6 @@ import { useSwipeable } from 'react-swipeable'
 import ChatModal from '@/components/ChatModal'
 
 const PREFETCH_THRESHOLD = 3; // Start fetching when 3 items away from the end
-const BATCH_SIZE = 10;
 
 export default function FeedPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
@@ -20,57 +19,103 @@ export default function FeedPage() {
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isStreaming, setIsStreaming] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [isFetchingNext, setIsFetchingNext] = useState(false)
-  const lastFetchedPage = useRef(0);
+  const streamBuffer = useRef('')
+  const lastFetchedPage = useRef(0)
 
-  const fetchTopics = async (page: number, shouldAppend = false) => {
+  const processStream = async (page: number) => {
     try {
-      const response = await fetch(`/api/feed?page=${page}&limit=${BATCH_SIZE}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch topics');
-      }
-      const data = await response.json();
+      setIsStreaming(true)
+      const response = await fetch(`/api/feed?page=${page}`)
+      if (!response.ok) throw new Error('Failed to fetch topics')
       
-      // If the response has less items than the batch size, we've reached the end
-      if (data.length < BATCH_SIZE) {
+      const reader = response.body?.getReader()
+      if (!reader) throw new Error('No reader available')
+
+      let topicCount = 0;
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+
+        const chunk = new TextDecoder().decode(value)
+        streamBuffer.current += chunk
+
+        // Process complete JSON objects from the buffer
+        const lines = streamBuffer.current.split('\n')
+        streamBuffer.current = lines.pop() || ''
+
+        for (const line of lines) {
+          if (line.trim()) {
+            try {
+              const topic = JSON.parse(line)
+              topicCount++;
+              setTopics(prev => {
+                const newTopics = [...prev, topic];
+                // If this is the first topic, we can stop showing the loading state
+                if (newTopics.length === 1) {
+                  setIsLoading(false);
+                }
+                return newTopics;
+              });
+            } catch (e) {
+              console.error('Failed to parse topic:', e)
+            }
+          }
+        }
+      }
+
+      // If we received fewer topics than expected, we've reached the end
+      if (topicCount < 5) {
         setHasMore(false);
       }
 
-      if (shouldAppend) {
-        setTopics(prev => [...prev, ...data]);
-      } else {
-        setTopics(data);
-      }
-      setError(null);
       lastFetchedPage.current = page;
     } catch (err) {
-      setError('Failed to load topics. Please try again later.');
-      console.error('Error fetching topics:', err);
+      setError('Failed to load topics. Please try again later.')
+      console.error('Error streaming topics:', err)
     } finally {
-      setIsLoading(false);
-      setIsFetchingNext(false);
+      setIsStreaming(false)
+      setIsFetchingNext(false)
+      // Only set isLoading to false if we haven't received any topics yet
+      if (topics.length === 0) {
+        setIsLoading(false)
+      }
     }
-  };
+  }
 
   // Initial fetch
   useEffect(() => {
-    fetchTopics(1);
-  }, []);
+    processStream(1)
+  }, [])
 
-  // Prefetch next batch when approaching the end
+  // Check if we need to prefetch more content when the current index changes
   useEffect(() => {
-    const shouldFetchNext = 
-      hasMore && 
-      !isFetchingNext && 
-      topics.length > 0 && 
-      currentIndex >= topics.length - PREFETCH_THRESHOLD;
-
-    if (shouldFetchNext) {
-      setIsFetchingNext(true);
-      fetchTopics(lastFetchedPage.current + 1, true);
+    // Only check for prefetching when the current index changes
+    if (hasMore && !isFetchingNext && !isStreaming && topics.length > 0) {
+      // If we're approaching the end, fetch the next page
+      if (currentIndex >= topics.length - PREFETCH_THRESHOLD) {
+        setIsFetchingNext(true);
+        processStream(lastFetchedPage.current + 1);
+      }
     }
-  }, [currentIndex, topics.length, hasMore, isFetchingNext]);
+  }, [currentIndex]);
+
+  // Add a new effect to proactively prefetch content
+  useEffect(() => {
+    // Start prefetching when we have at least one topic loaded
+    if (topics.length > 0 && hasMore && !isFetchingNext && !isStreaming) {
+      // Calculate how many topics we have left before we need more
+      const topicsLeft = topics.length - currentIndex;
+      
+      // If we're getting close to the end, prefetch more content
+      if (topicsLeft <= PREFETCH_THRESHOLD + 2) {
+        setIsFetchingNext(true);
+        processStream(lastFetchedPage.current + 1);
+      }
+    }
+  }, [topics.length, currentIndex, hasMore, isFetchingNext, isStreaming]);
 
   useEffect(() => {
     // Set initial window dimensions
@@ -196,9 +241,10 @@ export default function FeedPage() {
             onClick={() => {
               setIsLoading(true);
               setError(null);
-              lastFetchedPage.current = 0;
+              setTopics([]);
               setHasMore(true);
-              fetchTopics(1);
+              lastFetchedPage.current = 0;
+              processStream(1);
             }}
             className="px-4 py-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
           >

@@ -9,26 +9,18 @@ Each fact must follow these strict rules:
 6. **Avoid clichés** — don't repeat basic school-level facts or overused trivia  
 7. **Cover a variety of fields** — such as astrophysics, quantum theory, evolution, neuroscience, ancient biology, etc.  
 8. **Style matters** — this is for a modern audience who scrolls quickly. You only have 2 seconds to earn their attention. No fluff.
+9. **No repetition** — do not include any facts that have already been shown earlier in this conversation.
 
 ### Output Format:
-Return your response as a valid JSON array of objects with the following structure:
+Return your response as a stream of JSON objects, one per line. Each line should be a complete, valid JSON object with the following structure:
 
 ```json
-[
-  {
-    "id": "1",
-    "category": "Category name",
-    "title": "Bold headline",
-    "teaser": "Fact content - 2 to 4 vivid, accurate, surprising sentences."
-  },
-  {
-    "id": "2",
-    "category": "Another category",
-    "title": "Another headline",
-    "teaser": "Another fact content."
-  }
-  // ... and so on for all 10 facts
-]
+{"id": "1", "category": "Category name", "title": "Bold headline", "teaser": "Fact content - 2 to 4 vivid, accurate, surprising sentences."}
+{"id": "2", "category": "Another category", "title": "Another headline", "teaser": "Another fact content."}
 ```
 
-Make sure your response is ONLY the JSON array with no additional text before or after it.
+Make sure:
+1. Each line is a complete, valid JSON object
+2. No commas between objects
+3. No array brackets
+4. No additional text before or after the JSON objects
