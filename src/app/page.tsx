@@ -169,7 +169,7 @@ export default function Home() {
             </div>
           </div>
           
-          <div className="mt-4 sm:mt-8">
+          <div className="mt-8 sm:mt-8">
             {error ? (
               <div className="text-red-400 text-center">{error}</div>
             ) : (
@@ -181,34 +181,34 @@ export default function Home() {
                   language={language}
                   isLoading={isLoading}
                 />
-                <div className="mt-4 px-2 sm:px-6 lg:px-8">
-                  <div className="flex gap-2">
+                <div className="mt-8 px-2 sm:px-6 lg:px-8">
+                  <div className="flex flex-col sm:flex-row gap-2">
                     <input
                       type="text"
                       value={tempInterest}
                       onChange={handleInterestChange}
                       placeholder="Enter your interest (e.g., space, biology)"
-                      className="flex-1 px-4 py-2 rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-blue-500"
+                      className="w-full px-3 sm:px-4 py-2.5 text-sm sm:text-base rounded-lg bg-gray-800 text-white border border-gray-700 focus:outline-none focus:border-blue-500 placeholder:text-sm placeholder:text-gray-500"
                       disabled={isLoading}
                     />
                     <button
                       onClick={handleSetInterest}
                       disabled={!isInterestModified || isLoading}
-                      className={`whitespace-nowrap px-6 py-2 rounded-lg font-medium transition-all duration-200 ${
+                      className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 rounded-lg text-sm sm:text-base font-medium transition-all duration-200 ${
                         isInterestModified && !isLoading
-                          ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+                          ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30 hover:opacity-90'
                           : 'bg-gray-800 text-gray-400 cursor-not-allowed'
                       }`}
                     >
                       Set
                     </button>
                   </div>
-                  <div className="flex flex-wrap justify-center gap-2 mt-3">
+                  <div className="mt-8 space-y-2 sm:space-y-0 sm:flex sm:flex-wrap sm:justify-center sm:gap-2">
                     {QUICK_INTERESTS.map((interest) => (
                       <button
                         key={interest}
                         onClick={() => handleQuickInterest(interest)}
-                        className={`px-3 py-1 text-sm rounded-full transition-all duration-200 
+                        className={`w-full sm:w-auto px-3 py-1.5 text-sm rounded-full transition-all duration-200 
                           ${isLoading 
                             ? 'bg-gray-800 text-gray-300 opacity-75' 
                             : 'bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white border border-gray-700 hover:border-gray-600'

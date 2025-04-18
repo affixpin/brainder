@@ -21,37 +21,34 @@ export default function FactCard({ fact, onLike, onDislike, language, isLoading 
               {fact}
             </div>
             
-            <div className="mt-6 sm:mt-8 space-y-4 sm:space-y-6">
-              <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
+            <div className="mt-6 sm:mt-8">
+              <div className="flex flex-col sm:flex-row justify-center items-center gap-2 sm:gap-3">
                 <button
                   onClick={onLike}
                   disabled={isLoading}
-                  className={`flex-1 w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 ${
+                  className={`w-full sm:w-28 px-2 py-2 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 ${
                     isLoading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
                   Like
                 </button>
                 <button
-                  onClick={onDislike}
-                  disabled={isLoading}
-                  className={`flex-1 w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-red-500/30 hover:-translate-y-1 ${
-                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
-                  }`}
-                >
-                  Don't Like
-                </button>
-              </div>
-              
-              <div className="flex justify-center">
-                <button
                   onClick={() => setIsExplanationOpen(true)}
                   disabled={isLoading}
-                  className={`w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 ${
+                  className={`w-full sm:w-28 px-2 py-2 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 ${
                     isLoading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  Explain
+                  Research
+                </button>
+                <button
+                  onClick={onDislike}
+                  disabled={isLoading}
+                  className={`w-full sm:w-28 px-2 py-2 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl text-sm font-medium transition-all duration-200 hover:shadow-lg hover:shadow-red-500/30 hover:-translate-y-1 ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
+                >
+                  Dislike
                 </button>
               </div>
             </div>
