@@ -6,6 +6,7 @@ import { Topic } from '@/types/api';
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  isStreaming?: boolean;
 }
 
 interface ChatModalProps {
@@ -20,18 +21,84 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Add initial AI message
-      setMessages([
-        {
-          role: 'assistant',
-          content: `Hi! I'm your AI guide for "${topic.title}". Feel free to ask me any questions about this topic!`
-        }
-      ]);
+      // Start streaming the initial explanation
+      streamInitialExplanation();
     }
+    
+    return () => {
+      // Cleanup: abort any ongoing streams when component unmounts
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [isOpen, topic]);
+
+  const streamInitialExplanation = async () => {
+    // Add initial empty message that will be streamed
+    setMessages([{
+      role: 'assistant',
+      content: '',
+      isStreaming: true
+    }]);
+
+    try {
+      abortControllerRef.current = new AbortController();
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          topic,
+          history: [],
+        }),
+        signal: abortControllerRef.current.signal
+      });
+
+      if (!response.ok) throw new Error('Failed to get response');
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let content = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        content += chunk;
+        
+        // Update the message content as we receive chunks
+        setMessages([{
+          role: 'assistant',
+          content,
+          isStreaming: true
+        }]);
+      }
+
+      // Mark streaming as complete
+      setMessages([{
+        role: 'assistant',
+        content,
+        isStreaming: false
+      }]);
+
+    } catch (error) {
+      if ((error as Error).name === 'AbortError') return;
+      
+      console.error('Error streaming explanation:', error);
+      setMessages([{ 
+        role: 'assistant', 
+        content: 'Sorry, I encountered an error while explaining. Please try asking a specific question about the topic.',
+        isStreaming: false
+      }]);
+    }
+  };
 
   useEffect(() => {
     // Scroll to bottom when messages change
@@ -50,6 +117,9 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
     setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
 
     try {
+      // Add empty assistant message that will be streamed
+      setMessages(prev => [...prev, { role: 'assistant', content: '', isStreaming: true }]);
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
@@ -58,20 +128,46 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
         body: JSON.stringify({
           topicId: topic.id,
           message: userMessage,
-          history: messages,
+          history: messages.slice(0, -1), // Exclude the empty message we just added
         }),
       });
 
       if (!response.ok) throw new Error('Failed to get response');
+      if (!response.body) throw new Error('No response body');
 
-      const data = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }]);
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let content = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = decoder.decode(value);
+        content += chunk;
+        
+        // Update the last message with new content
+        setMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: 'assistant', content, isStreaming: true }
+        ]);
+      }
+
+      // Mark streaming as complete
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        { role: 'assistant', content, isStreaming: false }
+      ]);
     } catch (error) {
       console.error('Error sending message:', error);
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Sorry, I encountered an error. Please try again.' 
-      }]);
+      setMessages(prev => [
+        ...prev.slice(0, -1),
+        { 
+          role: 'assistant', 
+          content: 'Sorry, I encountered an error. Please try again.',
+          isStreaming: false
+        }
+      ]);
     } finally {
       setIsLoading(false);
     }
@@ -128,6 +224,9 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
                   }`}
                 >
                   {message.content}
+                  {message.isStreaming && (
+                    <span className="inline-block w-1 h-4 ml-1 bg-white/50 animate-pulse" />
+                  )}
                 </div>
               </div>
             ))}

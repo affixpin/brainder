@@ -1,40 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { OpenAI } from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
-
-interface Message {
-  role: 'user' | 'assistant';
-  content: string;
-}
+import { Message, streamContent } from '@/lib/openai';
+import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { topicId, message, history } = await request.json();
-
-    if (!topicId || !message) {
-      return NextResponse.json(
-        { error: 'Topic ID and message are required' },
-        { status: 400 }
-      );
-    }
-
-    // Fetch topic details to provide context
-    const topicResponse = await fetch(`${request.nextUrl.origin}/api/feed`);
-    const topics = await topicResponse.json();
-    const topic = topics.find((t: any) => t.id === topicId);
-
-    if (!topic) {
-      return NextResponse.json(
-        { error: 'Topic not found' },
-        { status: 404 }
-      );
-    }
+    const { topic, message, history } = await request.json();
 
     // Prepare the conversation history with system context
-    const messages = [
+    const messages: Message[] = [
       {
         role: 'system',
         content: `You are a helpful AI assistant discussing the topic: "${topic.title}" from the category "${topic.category}". 
@@ -46,32 +18,27 @@ export async function POST(request: NextRequest) {
         role: msg.role,
         content: msg.content
       })),
-      {
+      (message && {
         role: 'user',
         content: message
-      }
+      })
     ];
 
-    // Generate response from OpenAI
-    const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
-      messages: messages as any,
-      temperature: 0.7,
-      max_tokens: 500,
+    // Create a stream for the OpenAI response
+    const stream = streamContent(messages);
+
+    // Return the stream response
+    return new Response(stream, {
+      headers: {
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Transfer-Encoding': 'chunked',
+      },
     });
-
-    const response = completion.choices[0].message.content;
-
-    if (!response) {
-      throw new Error('No response from OpenAI');
-    }
-
-    return NextResponse.json({ message: response });
   } catch (error) {
     console.error('Error in chat endpoint:', error);
-    return NextResponse.json(
-      { error: 'Failed to generate response' },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: 'Failed to generate response' }),
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 } 
