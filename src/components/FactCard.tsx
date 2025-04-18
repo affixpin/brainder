@@ -6,9 +6,10 @@ interface FactCardProps {
   onLike: () => void;
   onDislike: () => void;
   language: string;
+  isLoading: boolean;
 }
 
-export default function FactCard({ fact, onLike, onDislike, language }: FactCardProps) {
+export default function FactCard({ fact, onLike, onDislike, language, isLoading }: FactCardProps) {
   const [isExplanationOpen, setIsExplanationOpen] = useState(false);
 
   return (
@@ -24,13 +25,19 @@ export default function FactCard({ fact, onLike, onDislike, language }: FactCard
               <div className="flex flex-col sm:flex-row justify-center gap-3 sm:gap-4">
                 <button
                   onClick={onLike}
-                  className="flex-1 w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-1"
+                  disabled={isLoading}
+                  className={`flex-1 w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-green-500/30 hover:-translate-y-1 ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   Like
                 </button>
                 <button
                   onClick={onDislike}
-                  className="flex-1 w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-red-500/30 hover:-translate-y-1"
+                  disabled={isLoading}
+                  className={`flex-1 w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-red-500 to-rose-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-red-500/30 hover:-translate-y-1 ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   Don't Like
                 </button>
@@ -39,7 +46,10 @@ export default function FactCard({ fact, onLike, onDislike, language }: FactCard
               <div className="flex justify-center">
                 <button
                   onClick={() => setIsExplanationOpen(true)}
-                  className="w-full max-w-[300px] px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-sm sm:text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1"
+                  disabled={isLoading}
+                  className={`w-full max-w-[300px] px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-sm sm:text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 ${
+                    isLoading ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
                   Explain in Detail
                 </button>

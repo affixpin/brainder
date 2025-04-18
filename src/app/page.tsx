@@ -16,11 +16,13 @@ export default function Home() {
   const [currentFact, setCurrentFact] = useState('');
   const [messageHistory, setMessageHistory] = useState<Message[]>([]);
   const [language, setLanguage] = useState('Українська');
+  const [isLoading, setIsLoading] = useState(false);
   const initialRequestMade = useRef(false);
 
   const generateFact = async (message: string, selectedLanguage = language) => {
     try {
       setError(null);
+      setIsLoading(true);
       
       const newUserMessage: Message = { role: 'user', content: message };
       const updatedHistory = [...messageHistory, newUserMessage];
@@ -69,6 +71,8 @@ export default function Home() {
     } catch (err) {
       console.error('Error generating fact:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate fact');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -81,7 +85,7 @@ export default function Home() {
   };
 
   const handleLanguageChange = async (newLanguage: string) => {
-    if (newLanguage === language) return;
+    if (newLanguage === language || isLoading) return;
     setLanguage(newLanguage);
     setMessageHistory([]);
     generateFact('Generate an interesting science fact', newLanguage);
@@ -110,11 +114,12 @@ export default function Home() {
                 <button
                   key={lang}
                   onClick={() => handleLanguageChange(lang)}
+                  disabled={isLoading}
                   className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                     language === lang
                       ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
                       : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700'
-                  }`}
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
                   {lang}
                 </button>
@@ -131,6 +136,7 @@ export default function Home() {
                 onLike={handleLike}
                 onDislike={handleDislike}
                 language={language}
+                isLoading={isLoading}
               />
             )}
           </div>

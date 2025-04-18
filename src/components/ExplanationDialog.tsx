@@ -42,6 +42,7 @@ export default function ExplanationDialog({ isOpen, onClose, fact, language }: E
 
   const fetchInitialExplanation = async () => {
     try {
+      setIsLoading(true);
       const response = await fetch('/api/explain', {
         method: 'POST',
         headers: {
@@ -77,11 +78,13 @@ export default function ExplanationDialog({ isOpen, onClose, fact, language }: E
     } catch (error) {
       console.error('Error getting initial explanation:', error);
       setInitialExplanation('Sorry, I encountered an error while generating the explanation. Please try asking specific questions instead.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const handleSendMessage = async () => {
-    if (!inputMessage.trim()) return;
+    if (!inputMessage.trim() || isLoading) return;
 
     const userMessage = { role: 'user' as const, content: inputMessage };
     setMessages(prev => [...prev, userMessage]);
@@ -163,7 +166,10 @@ export default function ExplanationDialog({ isOpen, onClose, fact, language }: E
           </h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-200 transition-colors p-1"
+            disabled={isLoading}
+            className={`text-gray-400 hover:text-gray-200 transition-colors p-1 ${
+              isLoading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
           >
             <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -201,9 +207,11 @@ export default function ExplanationDialog({ isOpen, onClose, fact, language }: E
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              onKeyPress={(e) => e.key === 'Enter' && !isLoading && handleSendMessage()}
               placeholder="Ask a question about this fact..."
-              className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-800 border border-gray-700 text-sm sm:text-base text-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
+              className={`flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-800 border border-gray-700 text-sm sm:text-base text-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500 ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
               disabled={isLoading}
             />
             <button
