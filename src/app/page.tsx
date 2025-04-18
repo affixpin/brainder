@@ -1,34 +1,27 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import FactCard from '@/components/FactCard';
+import Layout from '@/components/Layout';
 
 type Message = {
   role: 'user' | 'assistant';
   content: string;
 };
 
-type Language = 'en' | 'es' | 'fr';
-
-const LANGUAGES = {
-  en: 'English',
-  es: 'Español',
-  fr: 'Français'
-};
+const LANGUAGES = ['Українська', 'English', 'Русский'];
 
 export default function Home() {
   const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [currentFact, setCurrentFact] = useState('');
   const [messageHistory, setMessageHistory] = useState<Message[]>([]);
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState('Українська');
+  const initialRequestMade = useRef(false);
 
-  const generateFact = async (message: string) => {
+  const generateFact = async (message: string, selectedLanguage = language) => {
     try {
-      setIsLoading(true);
       setError(null);
       
-      // Add user message to history
       const newUserMessage: Message = { role: 'user', content: message };
       const updatedHistory = [...messageHistory, newUserMessage];
       setMessageHistory(updatedHistory);
@@ -40,7 +33,7 @@ export default function Home() {
         },
         body: JSON.stringify({
           messages: updatedHistory,
-          language
+          language: selectedLanguage
         }),
       });
 
@@ -49,18 +42,33 @@ export default function Home() {
         throw new Error(errorData.error || 'Failed to generate fact');
       }
 
-      const data = await response.json();
-      console.log('Received fact:', data);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+
+      if (!reader) {
+        throw new Error('No reader available');
+      }
+
+      let streamedContent = '';
+      setCurrentFact('');
       
-      // Add assistant response to history
-      const assistantMessage: Message = { role: 'assistant', content: data.content };
+      while (true) {
+        const { done, value } = await reader.read();
+        
+        if (done) {
+          break;
+        }
+        
+        const chunk = decoder.decode(value);
+        streamedContent += chunk;
+        setCurrentFact(streamedContent);
+      }
+      
+      const assistantMessage: Message = { role: 'assistant', content: streamedContent };
       setMessageHistory([...updatedHistory, assistantMessage]);
-      setCurrentFact(data.content);
     } catch (err) {
       console.error('Error generating fact:', err);
       setError(err instanceof Error ? err.message : 'Failed to generate fact');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -72,45 +80,62 @@ export default function Home() {
     generateFact('I DO NOT like this fact');
   };
 
-  const handleLanguageChange = (newLanguage: Language) => {
+  const handleLanguageChange = async (newLanguage: string) => {
+    if (newLanguage === language) return;
     setLanguage(newLanguage);
-    setMessageHistory([]); // Clear message history when language changes
-    generateFact('Generate an interesting science fact');
+    setMessageHistory([]);
+    generateFact('Generate an interesting science fact', newLanguage);
   };
 
-  // Generate initial fact on mount
   useEffect(() => {
-    generateFact('Generate an interesting science fact');
+    if (!initialRequestMade.current) {
+      initialRequestMade.current = true;
+      generateFact('Generate an interesting science fact', 'Українська');
+    }
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      <div className="absolute top-4 right-4 flex gap-2">
-        {(Object.entries(LANGUAGES) as [Language, string][]).map(([code, name]) => (
-          <button
-            key={code}
-            onClick={() => handleLanguageChange(code)}
-            className={`px-4 py-2 rounded-md transition-colors ${
-              language === code
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
-            }`}
-          >
-            {name}
-          </button>
-        ))}
+    <Layout>
+      <div className="min-h-screen py-4 sm:py-8 md:py-12">
+        <div className="max-w-2xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
+              Brainder
+            </h1>
+            <p className="mt-2 text-base sm:text-lg text-gray-400">
+              TikTok for your brain
+            </p>
+            <div className="flex flex-wrap justify-center gap-2 mt-4 sm:mt-8">
+              {LANGUAGES.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => handleLanguageChange(lang)}
+                  className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                    language === lang
+                      ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg shadow-blue-500/30'
+                      : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700'
+                  }`}
+                >
+                  {lang}
+                </button>
+              ))}
+            </div>
+          </div>
+          
+          <div className="mt-4 sm:mt-8">
+            {error ? (
+              <div className="text-red-400 text-center">{error}</div>
+            ) : (
+              <FactCard
+                fact={currentFact}
+                onLike={handleLike}
+                onDislike={handleDislike}
+                language={language}
+              />
+            )}
+          </div>
+        </div>
       </div>
-      
-      {error ? (
-        <div className="text-red-500 mb-4">{error}</div>
-      ) : (
-        <FactCard
-          fact={currentFact}
-          onLike={handleLike}
-          onDislike={handleDislike}
-          isLoading={isLoading}
-        />
-      )}
-    </main>
+    </Layout>
   );
 }

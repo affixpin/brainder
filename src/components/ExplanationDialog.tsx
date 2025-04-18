@@ -9,15 +9,15 @@ interface ExplanationDialogProps {
   isOpen: boolean;
   onClose: () => void;
   fact: string;
+  language: string;
 }
 
-export default function ExplanationDialog({ isOpen, onClose, fact }: ExplanationDialogProps) {
+export default function ExplanationDialog({ isOpen, onClose, fact, language }: ExplanationDialogProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [initialExplanation, setInitialExplanation] = useState('');
 
-  // Reset states when fact changes
   useEffect(() => {
     setInitialExplanation('');
     setMessages([]);
@@ -25,7 +25,6 @@ export default function ExplanationDialog({ isOpen, onClose, fact }: Explanation
     setIsLoading(false);
   }, [fact]);
 
-  // Reset states when dialog closes
   useEffect(() => {
     if (!isOpen) {
       setInitialExplanation('');
@@ -48,7 +47,7 @@ export default function ExplanationDialog({ isOpen, onClose, fact }: Explanation
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ fact }),
+        body: JSON.stringify({ fact, language }),
       });
 
       if (!response.ok) {
@@ -97,10 +96,11 @@ export default function ExplanationDialog({ isOpen, onClose, fact }: Explanation
         },
         body: JSON.stringify({
           messages: [
-            { role: 'system', content: `You are an expert explaining the following scientific fact in detail: "${fact}". Provide detailed, accurate, and engaging explanations to user questions about this fact.` },
+            { role: 'system', content: `You are an expert explaining the following scientific fact in detail: "${fact}". Provide detailed, accurate, and engaging explanations to user questions about this fact. You MUST respond in ${language}.` },
             ...messages,
             userMessage
-          ]
+          ],
+          language
         }),
       });
 
@@ -108,7 +108,6 @@ export default function ExplanationDialog({ isOpen, onClose, fact }: Explanation
         throw new Error('Failed to get response');
       }
 
-      // Add assistant message placeholder
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: ''
@@ -156,35 +155,39 @@ export default function ExplanationDialog({ isOpen, onClose, fact }: Explanation
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-semibold">Detailed Explanation</h2>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-end sm:items-center justify-center p-2 sm:p-4 z-50">
+      <div className="bg-gray-900 rounded-t-2xl sm:rounded-2xl w-full max-w-2xl max-h-[90vh] sm:max-h-[80vh] flex flex-col shadow-xl border border-gray-800">
+        <div className="p-3 sm:p-4 md:p-6 border-b border-gray-800 flex justify-between items-center">
+          <h2 className="text-lg sm:text-xl font-semibold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-cyan-400">
+            Detailed Explanation
+          </h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="text-gray-400 hover:text-gray-200 transition-colors p-1"
           >
-            ✕
+            <svg className="w-5 h-5 sm:w-6 sm:h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
         
-        <div className="p-4 border-b">
-          <p className="text-gray-700 italic">{fact}</p>
+        <div className="p-3 sm:p-4 md:p-6 border-b border-gray-800">
+          <p className="text-sm sm:text-base text-gray-300 italic">{fact}</p>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4">
           {initialExplanation && (
-            <div className="bg-gray-100 rounded-lg p-4 mb-6 whitespace-pre-wrap">
+            <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-xl p-3 sm:p-4 md:p-6 mb-4 sm:mb-6 whitespace-pre-wrap text-sm sm:text-base text-gray-200">
               {initialExplanation}
             </div>
           )}
           {messages.map((message, index) => (
             <div
               key={index}
-              className={`p-3 rounded-lg ${
+              className={`p-3 sm:p-4 rounded-xl text-sm sm:text-base ${
                 message.role === 'user'
-                  ? 'bg-blue-100 ml-auto max-w-[80%]'
-                  : 'bg-gray-100 mr-auto max-w-[80%]'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white ml-auto max-w-[85%] sm:max-w-[80%]'
+                  : 'bg-gray-800 text-gray-200 mr-auto max-w-[85%] sm:max-w-[80%]'
               }`}
             >
               {message.content}
@@ -192,24 +195,24 @@ export default function ExplanationDialog({ isOpen, onClose, fact }: Explanation
           ))}
         </div>
 
-        <div className="p-4 border-t">
-          <div className="flex space-x-2">
+        <div className="p-3 sm:p-4 md:p-6 border-t border-gray-800">
+          <div className="flex gap-2 sm:gap-3">
             <input
               type="text"
               value={inputMessage}
               onChange={(e) => setInputMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Ask a question about this fact..."
-              className="flex-1 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="flex-1 px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-800 border border-gray-700 text-sm sm:text-base text-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent placeholder-gray-500"
               disabled={isLoading}
             />
             <button
               onClick={handleSendMessage}
               disabled={isLoading || !inputMessage.trim()}
-              className={`px-4 py-2 bg-blue-500 text-white rounded-lg ${
+              className={`px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-full text-sm sm:text-base transition-all duration-200 ${
                 isLoading || !inputMessage.trim()
                   ? 'opacity-50 cursor-not-allowed'
-                  : 'hover:bg-blue-600'
+                  : 'hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-0.5'
               }`}
             >
               Send

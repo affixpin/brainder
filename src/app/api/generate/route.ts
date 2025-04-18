@@ -31,43 +31,49 @@ export const runtime = 'edge';
 export async function POST(req: Request) {
   try {
     console.log('API route called');
-    const { messages, language = 'en' } = await req.json();
+    const { messages, language = 'Ukrainian' } = await req.json();
     console.log('Received messages:', messages, 'Language:', language);
 
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not configured');
     }
 
-    // Map language codes to full language names
-    const languageNames = {
-      en: 'English',
-      es: 'Spanish',
-      fr: 'French'
-    };
-
-    const selectedLanguage = languageNames[language as keyof typeof languageNames];
-    if (!selectedLanguage) {
-      throw new Error('Unsupported language');
-    }
-
-    // Try non-streaming mode first for debugging
     const response = await openai.chat.completions.create({
       model: 'gpt-4',
-      stream: false,
+      stream: true,
       messages: [
-        { role: 'system', content: getSystemPrompt(selectedLanguage) },
+        { role: 'system', content: getSystemPrompt(language) },
         ...messages
       ],
     });
 
-    console.log('OpenAI API call successful:', response);
-    return new Response(
-      JSON.stringify({ role: 'assistant', content: response.choices[0].message.content }),
-      { 
-        headers: { 'Content-Type': 'application/json' },
-        status: 200 
+    // Create a TransformStream for text encoding
+    const encoder = new TextEncoder();
+    const stream = new TransformStream();
+    const writer = stream.writable.getWriter();
+
+    // Process the stream
+    (async () => {
+      try {
+        for await (const chunk of response) {
+          const content = chunk.choices[0]?.delta?.content || '';
+          if (content) {
+            await writer.write(encoder.encode(content));
+          }
+        }
+      } catch (error) {
+        console.error('Streaming error:', error);
+      } finally {
+        await writer.close();
       }
-    );
+    })();
+
+    return new Response(stream.readable, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'Cache-Control': 'no-cache',
+      },
+    });
   } catch (error) {
     console.error('API route error:', error);
     return new Response(
