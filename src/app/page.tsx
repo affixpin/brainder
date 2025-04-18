@@ -3,23 +3,44 @@
 import { useEffect, useState } from 'react';
 import FactCard from '@/components/FactCard';
 
+type Message = {
+  role: 'user' | 'assistant';
+  content: string;
+};
+
+type Language = 'en' | 'es' | 'fr';
+
+const LANGUAGES = {
+  en: 'English',
+  es: 'Español',
+  fr: 'Français'
+};
+
 export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentFact, setCurrentFact] = useState('');
+  const [messageHistory, setMessageHistory] = useState<Message[]>([]);
+  const [language, setLanguage] = useState<Language>('en');
 
   const generateFact = async (message: string) => {
     try {
       setIsLoading(true);
       setError(null);
       
+      // Add user message to history
+      const newUserMessage: Message = { role: 'user', content: message };
+      const updatedHistory = [...messageHistory, newUserMessage];
+      setMessageHistory(updatedHistory);
+
       const response = await fetch('/api/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          messages: [{ role: 'user', content: message }]
+          messages: updatedHistory,
+          language
         }),
       });
 
@@ -30,6 +51,10 @@ export default function Home() {
 
       const data = await response.json();
       console.log('Received fact:', data);
+      
+      // Add assistant response to history
+      const assistantMessage: Message = { role: 'assistant', content: data.content };
+      setMessageHistory([...updatedHistory, assistantMessage]);
       setCurrentFact(data.content);
     } catch (err) {
       console.error('Error generating fact:', err);
@@ -44,26 +69,47 @@ export default function Home() {
   };
 
   const handleDislike = () => {
-    generateFact('Generate a different fact');
+    generateFact('I DO NOT like this fact');
   };
 
+  const handleLanguageChange = (newLanguage: Language) => {
+    setLanguage(newLanguage);
+    setMessageHistory([]); // Clear message history when language changes
+    generateFact('Generate an interesting science fact');
+  };
+
+  // Generate initial fact on mount
   useEffect(() => {
-    generateFact('Generate a random fact');
+    generateFact('Generate an interesting science fact');
   }, []);
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-24 bg-gradient-to-b from-blue-50 to-white">
-      <h1 className="text-4xl font-bold mb-8 text-center">Brainder</h1>
+    <main className="flex min-h-screen flex-col items-center justify-between p-24">
+      <div className="absolute top-4 right-4 flex gap-2">
+        {(Object.entries(LANGUAGES) as [Language, string][]).map(([code, name]) => (
+          <button
+            key={code}
+            onClick={() => handleLanguageChange(code)}
+            className={`px-4 py-2 rounded-md transition-colors ${
+              language === code
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+            }`}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
+      
       {error ? (
         <div className="text-red-500 mb-4">{error}</div>
-      ) : currentFact ? (
+      ) : (
         <FactCard
           fact={currentFact}
           onLike={handleLike}
           onDislike={handleDislike}
+          isLoading={isLoading}
         />
-      ) : (
-        <div className="animate-pulse">Loading your fact... {isLoading ? '(Request in progress)' : '(Waiting to start)'}</div>
       )}
     </main>
   );

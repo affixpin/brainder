@@ -5,8 +5,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-// Cleanup old sessions (older than 1 hour)
-const SYSTEM_PROMPT = `You are an intelligent assistant designed to present users with short, captivating science facts — like a Tinder/TikTok for the brain. Each interaction is based on a card containing one interesting, snackable science insight.
+const getSystemPrompt = (language: string) => `You are an intelligent assistant designed to present users with short, captivating science facts — like a Tinder/TikTok for the brain. Each interaction is based on a card containing one interesting, snackable science insight. You MUST respond in ${language}.
 
 Each fact must follow these strict rules:
 1. **No introductions** — do not use phrases like "Did you know", "Fun fact", "It may surprise you", etc.  
@@ -32,11 +31,23 @@ export const runtime = 'edge';
 export async function POST(req: Request) {
   try {
     console.log('API route called');
-    const { messages } = await req.json();
-    console.log('Received messages:', messages);
+    const { messages, language = 'en' } = await req.json();
+    console.log('Received messages:', messages, 'Language:', language);
 
     if (!process.env.OPENAI_API_KEY) {
       throw new Error('OPENAI_API_KEY is not configured');
+    }
+
+    // Map language codes to full language names
+    const languageNames = {
+      en: 'English',
+      es: 'Spanish',
+      fr: 'French'
+    };
+
+    const selectedLanguage = languageNames[language as keyof typeof languageNames];
+    if (!selectedLanguage) {
+      throw new Error('Unsupported language');
     }
 
     // Try non-streaming mode first for debugging
@@ -44,7 +55,7 @@ export async function POST(req: Request) {
       model: 'gpt-4',
       stream: false,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: getSystemPrompt(selectedLanguage) },
         ...messages
       ],
     });
