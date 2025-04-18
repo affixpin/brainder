@@ -47,11 +47,11 @@ export default function FactCard({ fact, onLike, onDislike, language, isLoading 
                 <button
                   onClick={() => setIsExplanationOpen(true)}
                   disabled={isLoading}
-                  className={`w-full max-w-[300px] px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-sm sm:text-base font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 ${
+                  className={`w-full sm:max-w-[200px] px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl text-base sm:text-lg font-medium transition-all duration-200 hover:shadow-lg hover:shadow-blue-500/30 hover:-translate-y-1 ${
                     isLoading ? 'opacity-50 cursor-not-allowed' : ''
                   }`}
                 >
-                  Explain in Detail
+                  Explain
                 </button>
               </div>
             </div>
