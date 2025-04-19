@@ -16,9 +16,6 @@ interface ChatModalProps {
   onClose: () => void;
 }
 
-// Helper function to get a unique key for a topic
-const getTopicKey = (topicId: string) => `chat_history_${topicId}`;
-
 export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -29,53 +26,33 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
   const previousTopicIdRef = useRef<string>(topic.id);
   const { language } = useLanguage();
 
-  // Load cached history when topic changes
+  // Clear history when topic changes
   useEffect(() => {
+    console.log('Topic changed:', { previous: previousTopicIdRef.current, current: topic.id });
     if (previousTopicIdRef.current !== topic.id) {
-      // Save current history before switching topics
-      if (previousTopicIdRef.current) {
-        const previousKey = getTopicKey(previousTopicIdRef.current);
-        localStorage.setItem(previousKey, JSON.stringify(messages));
-      }
-      
-      // Load cached history for the new topic
-      const topicKey = getTopicKey(topic.id);
-      const cachedHistory = localStorage.getItem(topicKey);
-      
-      if (cachedHistory) {
-        setMessages(JSON.parse(cachedHistory));
-      } else {
-        setMessages([]);
-      }
-      
+      console.log('Clearing chat history');
+      setMessages([]);
       setInput('');
       previousTopicIdRef.current = topic.id;
     }
   }, [topic.id]);
 
-  // Save history to cache when messages change
-  useEffect(() => {
-    if (messages.length > 0) {
-      const topicKey = getTopicKey(topic.id);
-      localStorage.setItem(topicKey, JSON.stringify(messages));
-    }
-  }, [messages, topic.id]);
-
+  // Start initial explanation when modal opens with empty history
   useEffect(() => {
     if (isOpen && messages.length === 0) {
-      // Start streaming the initial explanation
+      console.log('Starting initial explanation');
       streamInitialExplanation();
     }
     
     return () => {
-      // Cleanup: abort any ongoing streams when component unmounts
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
     };
-  }, [isOpen, topic]);
+  }, [isOpen, topic.id]);
 
   const streamInitialExplanation = async () => {
+    console.log('Streaming initial explanation');
     // Add initial empty message that will be streamed
     setMessages([{
       role: 'assistant',
@@ -266,13 +243,13 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
                   <div className="whitespace-pre-wrap break-words">
                     {message.content}
                   </div>
-                  {message.isStreaming && (
+                  {message.isStreaming && !message.content && (
                     <span className="inline-block w-1 h-4 ml-1 bg-white/50 animate-pulse" />
                   )}
                 </div>
               </div>
             ))}
-            {isLoading && (
+            {isLoading && messages[messages.length - 1]?.role !== 'assistant' && (
               <div className="flex justify-start">
                 <div className="bg-white/10 rounded-2xl px-6 py-4 rounded-bl-sm min-w-[120px]">
                   <div className="flex items-center space-x-2">
