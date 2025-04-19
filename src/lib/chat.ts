@@ -32,7 +32,7 @@ export function streamChatContent(messages: Message[]): ReadableStream {
             Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
           },
           body: JSON.stringify({
-            model: 'gpt-3.5-turbo',
+            model: 'gpt-4',
             messages: validMessages,
             stream: true,
             temperature: 0.7,
