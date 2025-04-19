@@ -69,8 +69,8 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
         },
         body: JSON.stringify({
           teaser: topic.teaser,
+          language,
           history: [],
-          language
         }),
         signal: abortControllerRef.current.signal
       });

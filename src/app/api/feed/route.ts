@@ -2,17 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { streamFeedContent } from '@/lib/feed';
 import { readPromptFile } from '@/lib/openai';
 
-export async function OPTIONS() {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    },
-  });
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { language } = await request.json();
