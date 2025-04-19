@@ -220,6 +220,8 @@ export default function FeedPage() {
     trackMouse: false,
     preventScrollOnSwipe: true,
     swipeDuration: 250,
+    delta: 10, // Minimum swipe distance required
+    touchEventOptions: { passive: false }, // Prevent default touch behavior
   })
 
   const handleTopicClick = (e: React.MouseEvent) => {
@@ -342,14 +344,6 @@ export default function FeedPage() {
                 opacity: { duration: 0.15 }
               }}
               className="w-full max-w-lg px-6 absolute"
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.7}
-              onDragEnd={(e, { offset, velocity }) => {
-                const swipe = Math.abs(offset.y) * velocity.y;
-                if (swipe > 50) goToPrevious();
-                if (swipe < -50) goToNext();
-              }}
             >
               {isFetchingNext && currentIndex >= topics.length - PREFETCH_THRESHOLD ? (
                 <LoadingReel />
