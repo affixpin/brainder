@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Antitok - Educational Micro-Reels",
-  description: "Learn something new in 2-3 minutes with our text-based educational micro-reels.",
+  title: "Brainder",
+  description: "Learn something new in 2-3 minutes with our text-based educational reels.",
 };
 
 export default function RootLayout({

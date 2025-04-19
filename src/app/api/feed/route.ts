@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 import { streamFeedContent } from '@/lib/feed';
 import { readPromptFile } from '@/lib/openai';
 
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { language } = await request.json();
@@ -13,12 +24,18 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'Transfer-Encoding': 'chunked',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (error) {
     return NextResponse.json(
       { error: 'Failed to generate feed content' },
-      { status: 500 }
+      { 
+        status: 500,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+        }
+      }
     );
   }
 } 

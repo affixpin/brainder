@@ -2,6 +2,17 @@ import { Message, streamChatContent } from '@/lib/chat';
 import { readPromptFile } from '@/lib/openai';
 import { NextRequest } from 'next/server';
 
+export async function OPTIONS() {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { teaser, message, history, language } = await request.json();
@@ -38,13 +49,20 @@ export async function POST(request: NextRequest) {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'Transfer-Encoding': 'chunked',
+        'Access-Control-Allow-Origin': '*',
       },
     });
   } catch (error) {
     console.error('Error in chat endpoint:', error);
     return new Response(
       JSON.stringify({ error: 'Failed to generate response' }),
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+      { 
+        status: 500, 
+        headers: { 
+          'Content-Type': 'application/json',
+          'Access-Control-Allow-Origin': '*',
+        } 
+      }
     );
   }
 } 
