@@ -7,5 +7,3 @@ Break down the explanation into these sections:
 4. Interesting Details: Additional fascinating aspects related to this fact
 
 Keep each section concise but informative. Use clear, engaging language that a general audience can understand.
-
-Please explain this fact in detail: {teaser}

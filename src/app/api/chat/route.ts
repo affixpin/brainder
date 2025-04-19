@@ -12,17 +12,22 @@ export async function POST(request: NextRequest) {
       {
         role: 'system',
         content: systemPrompt
-          .replace('{teaser}', teaser)
           .replace('{language}', language)
       },
       ...history.map((msg: Message) => ({
         role: msg.role,
         content: msg.content
       })),
-      (message && {
-        role: 'user',
-        content: message
-      })
+      (message ?
+        {
+          role: 'user',
+          content: message
+        } :
+        {
+          role: 'user',
+          content: `Please explain this fact in detail: ${teaser}`
+        }
+      )
     ];
 
     // Create a stream for the OpenAI response
