@@ -62,8 +62,8 @@ export default function FeedPage() {
   const { language } = useLanguage();
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const SWIPE_THRESHOLD = 0.08; // Lower threshold - just 8% of screen height
-  const VELOCITY_THRESHOLD = 0.15; // More sensitive velocity detection
+  const SWIPE_THRESHOLD = 0.05; // Lower threshold from 0.08 to 0.05 - just 5% of screen height
+  const VELOCITY_THRESHOLD = 0.1; // More sensitive velocity detection (from 0.15 to 0.1)
 
   // Calculate a more responsive non-linear drag position with less resistance
   const calculateDragWithResistance = (delta: number): number => {
@@ -71,12 +71,12 @@ export default function FeedPage() {
     const sign = Math.sign(delta);
     const absValue = Math.min(Math.abs(delta), maxDrag);
     
-    // More responsive at the beginning, still has resistance at the end
-    // Starts at 90% response, goes down to 50% at maximum drag
-    const resistance = 0.9 - 0.4 * Math.pow(absValue / maxDrag, 1.5);
+    // More responsive at the beginning, with even less resistance
+    // Starts at 95% response, goes down to 60% at maximum drag
+    const resistance = 0.95 - 0.35 * Math.pow(absValue / maxDrag, 1.25);
     
-    // Amplify small movements - multiply small drags by up to 1.5x
-    const amplifier = 1 + (0.5 * Math.max(0, 1 - absValue / (maxDrag * 0.2)));
+    // Amplify small movements more - multiply small drags by up to 1.8x
+    const amplifier = 1 + (0.8 * Math.max(0, 1 - absValue / (maxDrag * 0.25)));
     
     return sign * (absValue * resistance * amplifier);
   };
@@ -221,11 +221,11 @@ export default function FeedPage() {
 
   const handleWheel = useCallback((e: WheelEvent) => {
     // More sensitive wheel handling
-    if (!isDragging && Math.abs(e.deltaY) > 3) { // Lower threshold (was 5)
+    if (!isDragging && Math.abs(e.deltaY) > 1) { // Lower threshold from 3 to 1 for higher sensitivity
       if (e.deltaY > 0) {
-        goToNext();
-      } else {
         goToPrevious();
+      } else {
+        goToNext();
       }
     }
   }, [currentIndex, isScrolling, isDragging]);
@@ -279,8 +279,8 @@ export default function FeedPage() {
     },
     trackMouse: true, // Also track mouse movements for desktop
     preventScrollOnSwipe: true,
-    swipeDuration: 250,
-    delta: 5, // Lower delta for higher sensitivity (was 10)
+    swipeDuration: 200, // Reduced from 250 to 200 for snappier response
+    delta: 2, // Lower delta for much higher sensitivity (was 5)
     touchEventOptions: { passive: false },
   });
 
@@ -302,7 +302,7 @@ export default function FeedPage() {
     }),
     center: {
       y: isDragging ? dragY : 0,
-      rotate: isDragging ? dragY * 0.025 : 0, // Slight increase in rotation effect
+      rotate: isDragging ? dragY * 0.03 : 0, // Increased rotation effect for more visual feedback
       opacity: isDragging 
         ? 1 - Math.min(0.2, Math.abs(dragY) / windowDimensions.height) 
         : 1,
@@ -311,18 +311,17 @@ export default function FeedPage() {
         : 1,
       transition: {
         y: { 
-          type: "spring", 
-          stiffness: 350, // More responsive spring
-          damping: 26, // Slightly less damping for more movement
-          mass: 1.1, // Slightly lighter for faster response
+          type: "tween", // Changed from spring to tween for no bounce
+          duration: 0.3, // Smooth transition duration
+          ease: "easeOut" // Ease out for smooth stop
         },
         rotate: { 
-          type: "spring", 
-          stiffness: 280, 
-          damping: 20,
+          type: "tween", // Changed from spring to tween
+          duration: 0.3,
+          ease: "easeOut"
         },
-        opacity: { duration: 0.1 },
-        scale: { duration: 0.1 },
+        opacity: { duration: 0.08 }, 
+        scale: { duration: 0.08 },
       }
     },
     exit: (direction: number) => ({
@@ -332,15 +331,13 @@ export default function FeedPage() {
       scale: 0.92,
       transition: {
         y: { 
-          type: "spring", 
-          stiffness: 450, // Slightly reduced for more natural feel
-          damping: 35,
-          mass: 1.1,
-          restDelta: 0.5
+          type: "tween", // Changed from spring to tween for no bounce
+          duration: 0.4, // Slightly longer duration for exit
+          ease: "easeIn" // Ease in for smooth start
         },
-        rotate: { duration: 0.25 },
-        opacity: { duration: 0.15 },
-        scale: { duration: 0.15 },
+        rotate: { duration: 0.2 }, 
+        opacity: { duration: 0.12 }, 
+        scale: { duration: 0.12 }, 
       }
     })
   }
