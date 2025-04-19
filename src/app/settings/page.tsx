@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Moon, Sun, Bell, Globe, Shield, HelpCircle } from 'lucide-react';
+import { Globe, Shield, HelpCircle } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import { languages } from '@/data/languages';
+import { getStoredLanguage, setStoredLanguage, getLanguageName } from '@/utils/languageUtils';
 
 type SettingItem = {
   icon: React.ReactNode;
@@ -19,43 +21,30 @@ type SettingSection = {
 };
 
 export default function SettingsPage() {
-  const [darkMode, setDarkMode] = useState(true);
-  const [notifications, setNotifications] = useState(true);
-  const [language, setLanguage] = useState('English');
+  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+
+  useEffect(() => {
+    // Load the stored language preference on component mount
+    const storedLanguage = getStoredLanguage();
+    setSelectedLanguage(storedLanguage);
+  }, []);
+
+  const handleLanguageChange = (languageCode: string) => {
+    setSelectedLanguage(languageCode);
+    setStoredLanguage(languageCode);
+    setIsLanguageModalOpen(false);
+  };
 
   const settingsSections: SettingSection[] = [
-    {
-      title: 'Appearance',
-      items: [
-        { 
-          icon: <Moon className="w-5 h-5" />, 
-          label: 'Dark Mode', 
-          action: () => setDarkMode(!darkMode),
-          value: darkMode ? 'On' : 'Off',
-          toggle: true
-        },
-      ]
-    },
-    {
-      title: 'Notifications',
-      items: [
-        { 
-          icon: <Bell className="w-5 h-5" />, 
-          label: 'Push Notifications', 
-          action: () => setNotifications(!notifications),
-          value: notifications ? 'On' : 'Off',
-          toggle: true
-        },
-      ]
-    },
     {
       title: 'Preferences',
       items: [
         { 
           icon: <Globe className="w-5 h-5" />, 
           label: 'Language', 
-          action: () => {},
-          value: language,
+          action: () => setIsLanguageModalOpen(true),
+          value: getLanguageName(selectedLanguage),
           toggle: false
         },
       ]
@@ -121,6 +110,45 @@ export default function SettingsPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Language Selection Modal */}
+      {isLanguageModalOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
+          onClick={() => setIsLanguageModalOpen(false)}
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-black border border-white/10 rounded-xl w-full max-w-md mx-4 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-white/10">
+              <h2 className="text-xl font-semibold text-white">Select Language</h2>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto">
+              {languages.map((language) => (
+                <button
+                  key={language.code}
+                  onClick={() => handleLanguageChange(language.code)}
+                  className={`w-full p-4 text-left flex items-center justify-between ${
+                    selectedLanguage === language.code ? 'bg-white/10' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-white">{language.name}</span>
+                  {selectedLanguage === language.code && (
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <BottomNav />
     </div>
