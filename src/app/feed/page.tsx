@@ -60,6 +60,26 @@ export default function FeedPage() {
   const streamBuffer = useRef('')
   const lastFetchedPage = useRef(0)
   const { language } = useLanguage();
+  const [dragY, setDragY] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const SWIPE_THRESHOLD = 0.08; // Lower threshold - just 8% of screen height
+  const VELOCITY_THRESHOLD = 0.15; // More sensitive velocity detection
+
+  // Calculate a more responsive non-linear drag position with less resistance
+  const calculateDragWithResistance = (delta: number): number => {
+    const maxDrag = windowDimensions.height;
+    const sign = Math.sign(delta);
+    const absValue = Math.min(Math.abs(delta), maxDrag);
+    
+    // More responsive at the beginning, still has resistance at the end
+    // Starts at 90% response, goes down to 50% at maximum drag
+    const resistance = 0.9 - 0.4 * Math.pow(absValue / maxDrag, 1.5);
+    
+    // Amplify small movements - multiply small drags by up to 1.5x
+    const amplifier = 1 + (0.5 * Math.max(0, 1 - absValue / (maxDrag * 0.2)));
+    
+    return sign * (absValue * resistance * amplifier);
+  };
 
   const processStream = async (page: number) => {
     try {
@@ -180,34 +200,35 @@ export default function FeedPage() {
   }, []);
 
   const goToNext = () => {
-    if (currentIndex < topics.length - 1 && !isScrolling) {
-      setIsScrolling(true)
-      setDirection(1)
-      setCurrentIndex(currentIndex + 1)
+    if (currentIndex < topics.length - 1) {
+      setIsScrolling(true);
+      setDirection(1);
+      setCurrentIndex(currentIndex + 1);
     }
-  }
+  };
 
   const goToPrevious = () => {
-    if (currentIndex > 0 && !isScrolling) {
-      setIsScrolling(true)
-      setDirection(-1)
-      setCurrentIndex(currentIndex - 1)
+    if (currentIndex > 0) {
+      setIsScrolling(true);
+      setDirection(-1);
+      setCurrentIndex(currentIndex - 1);
     }
-  }
+  };
 
   const onAnimationComplete = () => {
     setIsScrolling(false)
   }
 
   const handleWheel = useCallback((e: WheelEvent) => {
-    if (Math.abs(e.deltaY) > 5) {
+    // More sensitive wheel handling
+    if (!isDragging && Math.abs(e.deltaY) > 3) { // Lower threshold (was 5)
       if (e.deltaY > 0) {
-        goToNext()
+        goToNext();
       } else {
-        goToPrevious()
+        goToPrevious();
       }
     }
-  }, [currentIndex, isScrolling])
+  }, [currentIndex, isScrolling, isDragging]);
 
   useEffect(() => {
     window.addEventListener('wheel', handleWheel, { passive: true })
@@ -215,14 +236,53 @@ export default function FeedPage() {
   }, [handleWheel])
 
   const handlers = useSwipeable({
-    onSwipedUp: () => goToNext(),
-    onSwipedDown: () => goToPrevious(),
-    trackMouse: false,
+    onSwipedUp: (e) => {
+      const threshold = windowDimensions.height * SWIPE_THRESHOLD;
+      const velocity = Math.abs(e.velocity);
+      
+      if (Math.abs(e.deltaY) > threshold || velocity > VELOCITY_THRESHOLD) {
+        goToNext();
+      }
+      setIsDragging(false);
+      setDragY(0);
+    },
+    onSwipedDown: (e) => {
+      const threshold = windowDimensions.height * SWIPE_THRESHOLD;
+      const velocity = Math.abs(e.velocity);
+      
+      if (Math.abs(e.deltaY) > threshold || velocity > VELOCITY_THRESHOLD) {
+        goToPrevious();
+      }
+      setIsDragging(false);
+      setDragY(0);
+    },
+    onSwiping: (e) => {
+      setIsDragging(true);
+      // Apply improved responsive resistance curve
+      const resistantDrag = calculateDragWithResistance(e.deltaY);
+      setDragY(resistantDrag);
+    },
+    onTouchEndOrOnMouseUp: () => {
+      // If we're still dragging when touch ends, check if we should complete the transition
+      if (isDragging) {
+        const threshold = windowDimensions.height * SWIPE_THRESHOLD;
+        if (Math.abs(dragY) > threshold) {
+          if (dragY > 0) {
+            goToPrevious();
+          } else {
+            goToNext();
+          }
+        }
+        setIsDragging(false);
+        setDragY(0);
+      }
+    },
+    trackMouse: true, // Also track mouse movements for desktop
     preventScrollOnSwipe: true,
     swipeDuration: 250,
-    delta: 10, // Minimum swipe distance required
-    touchEventOptions: { passive: false }, // Prevent default touch behavior
-  })
+    delta: 5, // Lower delta for higher sensitivity (was 10)
+    touchEventOptions: { passive: false },
+  });
 
   const handleTopicClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -236,18 +296,52 @@ export default function FeedPage() {
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? windowDimensions.height : -windowDimensions.height,
+      rotate: direction > 0 ? 2 : -2,
       opacity: 0,
-      x: 0
+      scale: 0.92,
     }),
     center: {
-      y: 0,
-      opacity: 1,
-      x: 0
+      y: isDragging ? dragY : 0,
+      rotate: isDragging ? dragY * 0.025 : 0, // Slight increase in rotation effect
+      opacity: isDragging 
+        ? 1 - Math.min(0.2, Math.abs(dragY) / windowDimensions.height) 
+        : 1,
+      scale: isDragging 
+        ? 1 - Math.min(0.08, Math.abs(dragY) / windowDimensions.height * 0.15) 
+        : 1,
+      transition: {
+        y: { 
+          type: "spring", 
+          stiffness: 350, // More responsive spring
+          damping: 26, // Slightly less damping for more movement
+          mass: 1.1, // Slightly lighter for faster response
+        },
+        rotate: { 
+          type: "spring", 
+          stiffness: 280, 
+          damping: 20,
+        },
+        opacity: { duration: 0.1 },
+        scale: { duration: 0.1 },
+      }
     },
     exit: (direction: number) => ({
       y: direction < 0 ? windowDimensions.height : -windowDimensions.height,
+      rotate: direction < 0 ? 2 : -2,
       opacity: 0,
-      x: 0
+      scale: 0.92,
+      transition: {
+        y: { 
+          type: "spring", 
+          stiffness: 450, // Slightly reduced for more natural feel
+          damping: 35,
+          mass: 1.1,
+          restDelta: 0.5
+        },
+        rotate: { duration: 0.25 },
+        opacity: { duration: 0.15 },
+        scale: { duration: 0.15 },
+      }
     })
   }
 
@@ -307,8 +401,8 @@ export default function FeedPage() {
     <>
       <motion.div
         key="feed-page"
-        initial={{ x: 0 }}
-        animate={{ x: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
         className="fixed inset-0 bg-black"
       >
         {/* Search header */}
@@ -329,7 +423,11 @@ export default function FeedPage() {
         </div>
 
         {/* Main content */}
-        <main className="h-screen w-full flex items-center justify-center overflow-hidden" {...handlers}>
+        <main 
+          className="h-screen w-full flex items-center justify-center overflow-hidden" 
+          {...handlers}
+          style={{ touchAction: 'none' }}
+        >
           <AnimatePresence initial={false} custom={direction} mode="popLayout">
             <motion.div
               key={currentIndex}
@@ -339,11 +437,7 @@ export default function FeedPage() {
               animate="center"
               exit="exit"
               onAnimationComplete={onAnimationComplete}
-              transition={{
-                y: { type: "tween", duration: 0.3, ease: "easeInOut" },
-                opacity: { duration: 0.15 }
-              }}
-              className="w-full max-w-lg px-6 absolute"
+              className={`w-full max-w-lg px-6 absolute ${isDragging ? 'touch-none' : ''}`}
             >
               {isFetchingNext && currentIndex >= topics.length - PREFETCH_THRESHOLD ? (
                 <LoadingReel />
@@ -379,4 +473,4 @@ export default function FeedPage() {
       />
     </>
   );
-} 
+}
