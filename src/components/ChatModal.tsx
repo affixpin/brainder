@@ -15,6 +15,9 @@ interface ChatModalProps {
   onClose: () => void;
 }
 
+// Helper function to get a unique key for a topic
+const getTopicKey = (topicId: string) => `chat_history_${topicId}`;
+
 export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -22,6 +25,39 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+  const previousTopicIdRef = useRef<string>(topic.id);
+
+  // Load cached history when topic changes
+  useEffect(() => {
+    if (previousTopicIdRef.current !== topic.id) {
+      // Save current history before switching topics
+      if (previousTopicIdRef.current) {
+        const previousKey = getTopicKey(previousTopicIdRef.current);
+        localStorage.setItem(previousKey, JSON.stringify(messages));
+      }
+      
+      // Load cached history for the new topic
+      const topicKey = getTopicKey(topic.id);
+      const cachedHistory = localStorage.getItem(topicKey);
+      
+      if (cachedHistory) {
+        setMessages(JSON.parse(cachedHistory));
+      } else {
+        setMessages([]);
+      }
+      
+      setInput('');
+      previousTopicIdRef.current = topic.id;
+    }
+  }, [topic.id]);
+
+  // Save history to cache when messages change
+  useEffect(() => {
+    if (messages.length > 0) {
+      const topicKey = getTopicKey(topic.id);
+      localStorage.setItem(topicKey, JSON.stringify(messages));
+    }
+  }, [messages, topic.id]);
 
   useEffect(() => {
     if (isOpen && messages.length === 0) {

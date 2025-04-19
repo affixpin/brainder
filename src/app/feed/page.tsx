@@ -10,6 +10,40 @@ import ChatModal from '@/components/ChatModal'
 
 const PREFETCH_THRESHOLD = 3; // Start fetching when 3 items away from the end
 
+// Helper function to parse JSON objects from a stream buffer
+const parseJsonFromStream = (buffer: string): any[] => {
+  const results: any[] = [];
+  let startIndex = 0;
+  
+  while (true) {
+    const openBraceIndex = buffer.indexOf('{', startIndex);
+    if (openBraceIndex === -1) break;
+    
+    let braceCount = 1;
+    let currentIndex = openBraceIndex + 1;
+    
+    while (braceCount > 0 && currentIndex < buffer.length) {
+      if (buffer[currentIndex] === '{') braceCount++;
+      if (buffer[currentIndex] === '}') braceCount--;
+      currentIndex++;
+    }
+    
+    if (braceCount === 0) {
+      try {
+        const jsonStr = buffer.substring(openBraceIndex, currentIndex);
+        const obj = JSON.parse(jsonStr);
+        results.push(obj);
+      } catch (e) {
+        console.error('Failed to parse JSON:', e);
+      }
+    }
+    
+    startIndex = currentIndex;
+  }
+  
+  return results;
+};
+
 export default function FeedPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -27,68 +61,67 @@ export default function FeedPage() {
 
   const processStream = async (page: number) => {
     try {
-      setIsStreaming(true)
-      const response = await fetch(`/api/feed?page=${page}`)
-      if (!response.ok) throw new Error('Failed to fetch topics')
-      
-      const reader = response.body?.getReader()
-      if (!reader) throw new Error('No reader available')
+      setIsStreaming(true);
+      const response = await fetch(`/api/feed?page=${page}`);
+      if (!response.ok) throw new Error('Failed to fetch topics');
+      if (!response.body) throw new Error('No response body');
 
-      let topicCount = 0;
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
       while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-
-        const chunk = new TextDecoder().decode(value)
-        streamBuffer.current += chunk
-
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        buffer += decoder.decode(value);
+        
         // Process complete JSON objects from the buffer
-        const lines = streamBuffer.current.split('\n')
-        streamBuffer.current = lines.pop() || ''
-
-        for (const line of lines) {
-          if (line.trim()) {
-            try {
-              const topic = JSON.parse(line)
-              topicCount++;
-              setTopics(prev => {
-                const newTopics = [...prev, topic];
-                // If this is the first topic, we can stop showing the loading state
-                if (newTopics.length === 1) {
-                  setIsLoading(false);
-                }
-                return newTopics;
-              });
-            } catch (e) {
-              console.error('Failed to parse topic:', e)
+        const jsonObjects = parseJsonFromStream(buffer);
+        
+        if (jsonObjects.length > 0) {
+          // Fix the property name issue - check for both "teaser" and "teteaser"
+          const fixedObjects = jsonObjects.map((obj: any) => {
+            if (obj.teteaser && !obj.teaser) {
+              return {
+                ...obj,
+                teaser: obj.teteaser,
+                teteaser: undefined
+              };
             }
-          }
+            return obj;
+          });
+          
+          setTopics(prev => {
+            const newTopics = [...prev, ...fixedObjects];
+            // If this is the first topic, we can stop showing the loading state
+            if (newTopics.length === 1) {
+              setIsLoading(false);
+            }
+            return newTopics;
+          });
+          
+          // Clear processed objects from buffer
+          buffer = buffer.substring(buffer.lastIndexOf('}') + 1);
         }
       }
-
-      // If we received fewer topics than expected, we've reached the end
-      if (topicCount < 5) {
-        setHasMore(false);
-      }
-
-      lastFetchedPage.current = page;
-    } catch (err) {
-      setError('Failed to load topics. Please try again later.')
-      console.error('Error streaming topics:', err)
+    } catch (error) {
+      console.error('Error processing stream:', error);
+      setError('Failed to load topics. Please try again.');
     } finally {
-      setIsStreaming(false)
-      setIsFetchingNext(false)
+      setIsStreaming(false);
+      setIsFetchingNext(false);
       // Only set isLoading to false if we haven't received any topics yet
       if (topics.length === 0) {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
-  }
+  };
 
   // Initial fetch
   useEffect(() => {
-    processStream(1)
-  }, [])
+    processStream(1);
+  }, []);
 
   // Check if we need to prefetch more content when the current index changes
   useEffect(() => {

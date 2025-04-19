@@ -1,18 +1,20 @@
 import { Message, streamChatContent } from '@/lib/chat';
+import { readPromptFile } from '@/lib/openai';
 import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
     const { topic, message, history } = await request.json();
+    const systemPrompt = await readPromptFile(1);
 
     // Prepare the conversation history with system context
     const messages: Message[] = [
       {
         role: 'system',
-        content: `You are a helpful AI assistant discussing the topic: "${topic.title}" from the category "${topic.category}". 
-        Your goal is to provide accurate, engaging, and educational responses about this topic.
-        Use the following context about the topic: "${topic.teaser}"
-        Keep your responses concise, friendly, and informative.`
+        content: systemPrompt
+          .replace('{topicTitle}', topic.title)
+          .replace('{topicCategory}', topic.category)
+          .replace('{topicTeaser}', topic.teaser),
       },
       ...history.map((msg: Message) => ({
         role: msg.role,
