@@ -4,7 +4,7 @@ import { NextRequest } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { topic, message, history } = await request.json();
+    const { teaser, message, history, language } = await request.json();
     const systemPrompt = await readPromptFile(1);
 
     // Prepare the conversation history with system context
@@ -12,9 +12,8 @@ export async function POST(request: NextRequest) {
       {
         role: 'system',
         content: systemPrompt
-          .replace('{topicTitle}', topic.title)
-          .replace('{topicCategory}', topic.category)
-          .replace('{topicTeaser}', topic.teaser),
+          .replace('{teaser}', teaser)
+          .replace('{language}', language)
       },
       ...history.map((msg: Message) => ({
         role: msg.role,

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, Send, Paperclip } from 'lucide-react';
 import { Topic } from '@/types/api';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -26,6 +27,7 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const previousTopicIdRef = useRef<string>(topic.id);
+  const { language } = useLanguage();
 
   // Load cached history when topic changes
   useEffect(() => {
@@ -89,8 +91,9 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic,
+          teaser: topic.teaser,
           history: [],
+          language
         }),
         signal: abortControllerRef.current.signal
       });
@@ -159,9 +162,10 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          topic,
+          teaser: topic.teaser,
           message: userMessage,
           history: messages,
+          language
         }),
       });
 
@@ -253,13 +257,15 @@ export default function ChatModal({ topic, isOpen, onClose }: ChatModalProps) {
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                  className={`max-w-[95%] rounded-2xl px-4 py-2 ${
                     message.role === 'user'
                       ? 'bg-blue-600 text-white rounded-br-sm'
                       : 'bg-white/10 text-white rounded-bl-sm'
                   }`}
                 >
-                  {message.content}
+                  <div className="whitespace-pre-wrap break-words">
+                    {message.content}
+                  </div>
                   {message.isStreaming && (
                     <span className="inline-block w-1 h-4 ml-1 bg-white/50 animate-pulse" />
                   )}

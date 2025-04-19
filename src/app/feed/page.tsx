@@ -7,6 +7,7 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSwipeable } from 'react-swipeable'
 import ChatModal from '@/components/ChatModal'
+import { useLanguage } from '@/contexts/LanguageContext';
 
 const PREFETCH_THRESHOLD = 3; // Start fetching when 3 items away from the end
 
@@ -58,11 +59,20 @@ export default function FeedPage() {
   const [isFetchingNext, setIsFetchingNext] = useState(false)
   const streamBuffer = useRef('')
   const lastFetchedPage = useRef(0)
+  const { language } = useLanguage();
 
   const processStream = async (page: number) => {
     try {
       setIsStreaming(true);
-      const response = await fetch(`/api/feed?page=${page}`);
+      const response = await fetch(`/api/feed`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          language
+        }),
+      });
       if (!response.ok) throw new Error('Failed to fetch topics');
       if (!response.body) throw new Error('No response body');
 

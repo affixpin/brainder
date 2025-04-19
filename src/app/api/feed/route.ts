@@ -1,11 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { streamFeedContent } from '@/lib/feed';
 import { readPromptFile } from '@/lib/openai';
 
-export async function GET() {
+export async function POST(request: NextRequest) {
   try {
+    const { language } = await request.json();
+    
     const systemPrompt = await readPromptFile(0);
-    const stream = await streamFeedContent(systemPrompt);
+    const stream = await streamFeedContent(systemPrompt.replace('{language}', language));
 
     return new Response(stream, {
       headers: {

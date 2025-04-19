@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Globe, Shield, HelpCircle } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
 import { languages } from '@/data/languages';
-import { getStoredLanguage, setStoredLanguage, getLanguageName } from '@/utils/languageUtils';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 type SettingItem = {
   icon: React.ReactNode;
@@ -21,18 +21,11 @@ type SettingSection = {
 };
 
 export default function SettingsPage() {
-  const [selectedLanguage, setSelectedLanguage] = useState('en');
+  const { language, setLanguage } = useLanguage();
   const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
 
-  useEffect(() => {
-    // Load the stored language preference on component mount
-    const storedLanguage = getStoredLanguage();
-    setSelectedLanguage(storedLanguage);
-  }, []);
-
-  const handleLanguageChange = (languageCode: string) => {
-    setSelectedLanguage(languageCode);
-    setStoredLanguage(languageCode);
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
     setIsLanguageModalOpen(false);
   };
 
@@ -44,7 +37,7 @@ export default function SettingsPage() {
           icon: <Globe className="w-5 h-5" />, 
           label: 'Language', 
           action: () => setIsLanguageModalOpen(true),
-          value: getLanguageName(selectedLanguage),
+          value: language,
           toggle: false
         },
       ]
@@ -131,16 +124,16 @@ export default function SettingsPage() {
               <h2 className="text-xl font-semibold text-white">Select Language</h2>
             </div>
             <div className="max-h-[60vh] overflow-y-auto">
-              {languages.map((language) => (
+              {languages.map((lang) => (
                 <button
-                  key={language.code}
-                  onClick={() => handleLanguageChange(language.code)}
+                  key={lang}
+                  onClick={() => handleLanguageChange(lang)}
                   className={`w-full p-4 text-left flex items-center justify-between ${
-                    selectedLanguage === language.code ? 'bg-white/10' : 'hover:bg-white/5'
+                    language === lang ? 'bg-white/10' : 'hover:bg-white/5'
                   }`}
                 >
-                  <span className="text-white">{language.name}</span>
-                  {selectedLanguage === language.code && (
+                  <span className="text-white">{lang}</span>
+                  {language === lang && (
                     <div className="w-2 h-2 rounded-full bg-blue-500" />
                   )}
                 </button>

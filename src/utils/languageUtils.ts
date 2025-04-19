@@ -3,19 +3,29 @@ import { languages } from '@/data/languages';
 const LANGUAGE_STORAGE_KEY = 'antitok_preferred_language';
 
 export const getStoredLanguage = (): string => {
-  if (typeof window === 'undefined') return 'en';
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') return 'English';
   
-  const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-  return storedLanguage || 'en';
+  try {
+    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    // Validate that the stored language is in our list of languages
+    if (storedLanguage && languages.includes(storedLanguage)) {
+      return storedLanguage;
+    }
+  } catch (error) {
+    console.error('Error accessing localStorage:', error);
+  }
+  
+  return 'English';
 };
 
-export const setStoredLanguage = (languageCode: string): void => {
+export const setStoredLanguage = (language: string): void => {
+  // Check if we're in a browser environment
   if (typeof window === 'undefined') return;
   
-  localStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
-};
-
-export const getLanguageName = (languageCode: string): string => {
-  const language = languages.find(lang => lang.code === languageCode);
-  return language ? language.name : 'English';
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, language);
+  } catch (error) {
+    console.error('Error setting language in localStorage:', error);
+  }
 }; 
