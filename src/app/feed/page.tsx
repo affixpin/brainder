@@ -23,6 +23,7 @@ export default function FeedPage() {
   const { language } = useLanguage();
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const SWIPE_THRESHOLD = 0.05; // Lower threshold from 0.08 to 0.05 - just 5% of screen height
   const VELOCITY_THRESHOLD = 0.1; // More sensitive velocity detection (from 0.15 to 0.1)
 
@@ -46,8 +47,6 @@ export default function FeedPage() {
 
   // Simplified fetch content function with better error handling
   const fetchMoreContent = async () => {
-    // Prevent duplicate requests while one is in progress
-
     try {
       setIsFetchingMore(true);
 
@@ -56,16 +55,15 @@ export default function FeedPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           language,
-          existingTopics: topics.map(topic => topic.title) 
+          existingTopics: topics.map(topic => topic.teaser),
+          search: searchQuery 
         }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch topics');
 
       const data = await response.json();
-      // Process topics if API returns formatted array directly
       setTopics(prev => [...prev, ...data]);
-      // Update last fetched page and loading states
     } catch (error) {
       console.error('Error fetching content:', error);
       setError('Failed to load topics. Please try again.');
@@ -199,6 +197,13 @@ export default function FeedPage() {
     setIsChatOpen(true);
   };
 
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setTopics([]);
+    setCurrentIndex(0);
+    fetchMoreContent();
+  };
+
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? windowDimensions.height : -windowDimensions.height,
@@ -295,19 +300,25 @@ export default function FeedPage() {
       >
         {/* Search header */}
         <div className="absolute top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 px-3 py-2.5 z-50">
-          <div className="flex items-center gap-2 max-w-lg mx-auto">
+          <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-lg mx-auto">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
               <input
                 type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search topics"
                 className="w-full bg-[#222222] rounded-full py-2 pl-10 pr-4 text-[15px] text-white placeholder:text-white/50 focus:outline-none focus:bg-[#333333]"
               />
             </div>
-            <button className="p-1.5">
-              <MoreVertical className="w-6 h-6 text-white" />
+            <button 
+              type="submit" 
+              className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
+              aria-label="Search"
+            >
+              <Search className="w-5 h-5 text-white" />
             </button>
-          </div>
+          </form>
         </div>
 
         {/* Main content */}

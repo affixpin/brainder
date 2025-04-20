@@ -2,21 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from "ai";
 import { getModel } from "@/lib/models";
 
-const getSystemPrompt = (language: string, existingTopics: string[] = []) => {
+const getSystemPrompt = (language: string, search: string, existingTopics: string[] = []) => {
   const existingTopicsSection = existingTopics.length > 0 
     ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${existingTopics.map(title => `- "${title}"`).join('\n')}`
     : '';
-
+  
+  const themeSection = search
+    ? `**Generate facts based on the following keyword** - ${search}`
+    : '**Cover a variety of fields** — such as astrophysics, quantum theory, evolution, neuroscience, ancient biology, etc.';
+  
   return `You are an expert science communicator and writer for a short-form educational platform. Your task is to generate **high-impact, scientifically accurate micro-facts** — each one like a short "text-based Reel" designed to immediately grab attention.
 
 Each fact must follow these strict rules:
-1. **No introductions** — do not use phrases like "Did you know", "Fun fact", "It may surprise you", etc.  
-2. **Start directly with the core of the fact** — hit hard from the first word  
-3. **Keep it short and dense** — 2 to 4 punchy sentences max  
-4. **Use vivid, clear, emotional, and visual language**  
-5. **100% scientifically correct** — no exaggeration, no pseudoscience  
-6. **Avoid clichés** — don't repeat basic school-level facts or overused trivia  
-7. **Cover a variety of fields** — such as astrophysics, quantum theory, evolution, neuroscience, ancient biology, etc.  
+1. ${themeSection}  
+2. **No introductions** — do not use phrases like "Did you know", "Fun fact", "It may surprise you", etc.  
+3. **Start directly with the core of the fact** — hit hard from the first word  
+4. **Keep it short and dense** — 2 to 4 punchy sentences max  
+5. **Use vivid, clear, emotional, and visual language**  
+6. **100% scientifically correct** — no exaggeration, no pseudoscience  
+7. **Avoid clichés** — don't repeat basic school-level facts or overused trivia  
 8. **Style matters** — this is for a modern audience who scrolls quickly. You only have 2 seconds to earn their attention. No fluff.
 9. **No repetition** — do not include any facts that have already been shown earlier in this conversation.
 10. Avoid sounding like an encyclopedia — your goal is to **evoke wonder** and **hook the user's attention**.
@@ -46,9 +50,9 @@ You MUST respond in ${language}.`;
 
 export async function POST(request: NextRequest) {
   try {
-    const { language, existingTopics = [] } = await request.json();
+    const { language, search, existingTopics = [] } = await request.json();
 
-    const systemPrompt = getSystemPrompt(language, existingTopics);
+    const systemPrompt = getSystemPrompt(language, search, existingTopics);
 
     // Generate text using the preferred model (defaults to OpenAI)
     const { text } = await generateText({
