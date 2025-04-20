@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       model: getModel(),
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: "Generate 2 facts in the specified JSON format. Each fact should be a separate JSON object on a new line." }
+        { role: 'user', content: "Generate 5 facts in the specified JSON format. Each fact should be a separate JSON object on a new line." }
       ],
     });
 

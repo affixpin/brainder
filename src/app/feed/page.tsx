@@ -9,6 +9,8 @@ import { useSwipeable } from 'react-swipeable'
 import ChatModal from '@/components/ChatModal'
 import { useLanguage } from '@/contexts/LanguageContext';
 
+const PREFETCH_THRESHOLD = 2; // Start fetching when 2 items away from the end
+
 export default function FeedPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -82,7 +84,7 @@ export default function FeedPage() {
       console.log("fetching more content initial")
     }
 
-    if (currentIndex >= topics.length - 1 && topics.length > 0) {
+    if (currentIndex >= topics.length - PREFETCH_THRESHOLD && topics.length > 0) {
       console.log("fetching more content", currentIndex, topics.length)
       fetchMoreContent();
     }
