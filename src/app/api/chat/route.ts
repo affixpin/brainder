@@ -1,9 +1,5 @@
-import { Message } from '@/lib/chat';
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+import { streamText } from 'ai';
+import { getModel } from '@/lib/models';
 
 const getSystemPrompt = (language: string) => `You are an expert science communicator. Your task is to provide a detailed, engaging, and accurate explanation of a scientific fact. You MUST respond in ${language}.
 
@@ -17,70 +13,23 @@ Keep each section concise but informative. Use clear, engaging language that a g
 
 export async function POST(req: Request) {
   try {
-    const { teaser, language, history, message } = await req.json();
+    const { messages = [], language} = await req.json();
 
-    if (!teaser) {
-      return new Response(
-        JSON.stringify({ error: 'Fact is required' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    // Ensure system prompt with correct language is included
+    const systemMessage = {
+      role: 'system',
+      content: getSystemPrompt(language || 'English')
+    };
 
-    if (!process.env.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not configured');
-    }
+    const allMessages =  [systemMessage, ...messages];
 
-    const messages: Message[] = [
-      {
-        role: 'system',
-        content: getSystemPrompt(language)
-      },
-      {
-        role: 'user',
-        content: `Please explain this fact in detail: ${teaser}`
-      },
-      ...history,
-    ];
-    if (message) {
-      messages.push({
-        role: 'user',
-        content: message
-      });
-    }
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      stream: true,
-      messages,
+    // Use streamText from ai package
+    const result = await streamText({
+      model: getModel(),
+      messages: allMessages,
     });
 
-    // Create a TransformStream for text encoding
-    const encoder = new TextEncoder();
-    const stream = new TransformStream();
-    const writer = stream.writable.getWriter();
-
-    // Process the stream
-    (async () => {
-      try {
-        for await (const chunk of response) {
-          const content = chunk.choices[0]?.delta?.content || '';
-          if (content) {
-            await writer.write(encoder.encode(content));
-          }
-        }
-      } catch (error) {
-        console.error('Streaming error:', error);
-      } finally {
-        await writer.close();
-      }
-    })();
-
-    return new Response(stream.readable, {
-      headers: {
-        'Content-Type': 'text/plain',
-        'Cache-Control': 'no-cache',
-      },
-    });
+    return result.toDataStreamResponse();
   } catch (error) {
     console.error('API route error:', error);
     return new Response(

@@ -11,40 +11,6 @@ import { useLanguage } from '@/contexts/LanguageContext';
 
 const PREFETCH_THRESHOLD = 3; // Start fetching when 3 items away from the end
 
-// Helper function to parse JSON objects from a stream buffer
-const parseJsonFromStream = (buffer: string): any[] => {
-  const results: any[] = [];
-  let startIndex = 0;
-  
-  while (true) {
-    const openBraceIndex = buffer.indexOf('{', startIndex);
-    if (openBraceIndex === -1) break;
-    
-    let braceCount = 1;
-    let currentIndex = openBraceIndex + 1;
-    
-    while (braceCount > 0 && currentIndex < buffer.length) {
-      if (buffer[currentIndex] === '{') braceCount++;
-      if (buffer[currentIndex] === '}') braceCount--;
-      currentIndex++;
-    }
-    
-    if (braceCount === 0) {
-      try {
-        const jsonStr = buffer.substring(openBraceIndex, currentIndex);
-        const obj = JSON.parse(jsonStr);
-        results.push(obj);
-      } catch (e) {
-        console.error('Failed to parse JSON:', e);
-      }
-    }
-    
-    startIndex = currentIndex;
-  }
-  
-  return results;
-};
-
 export default function FeedPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -54,10 +20,8 @@ export default function FeedPage() {
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 })
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [isStreaming, setIsStreaming] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [isFetchingNext, setIsFetchingNext] = useState(false)
-  const streamBuffer = useRef('')
   const lastFetchedPage = useRef(0)
   const { language } = useLanguage();
   const [dragY, setDragY] = useState(0);
@@ -81,33 +45,38 @@ export default function FeedPage() {
     return sign * (absValue * resistance * amplifier);
   };
 
-  const processStream = async (page: number) => {
+  // Simplified fetch content function with better error handling
+  const fetchContent = async (page: number) => {
     try {
-      setIsStreaming(true);
-      const response = await fetch(`/api/feed`, {
+      setIsFetchingNext(true);
+      
+      const response = await fetch('/api/feed', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          language
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ language }),
       });
+      
       if (!response.ok) throw new Error('Failed to fetch topics');
-      if (!response.body) throw new Error('No response body');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        
-        buffer += decoder.decode(value);
-        
-        // Process complete JSON objects from the buffer
-        const jsonObjects = parseJsonFromStream(buffer);
+      
+      const data = await response.json();
+      
+      if (Array.isArray(data)) {
+        // Process topics if API returns formatted array directly
+        setTopics(prev => [...prev, ...data]);
+      } else if (data.content) {
+        // Process topics if API returns content string
+        const jsonObjects = data.content
+          .split('\n')
+          .filter((line: string) => line.trim())
+          .map((line: string) => {
+            try {
+              return JSON.parse(line.trim());
+            } catch (e) {
+              console.error('Failed to parse JSON:', e);
+              return null;
+            }
+          })
+          .filter(Boolean); // Remove any null values
         
         if (jsonObjects.length > 0) {
           // Fix the property name issue - check for both "teaser" and "teteaser"
@@ -122,63 +91,43 @@ export default function FeedPage() {
             return obj;
           });
           
-          setTopics(prev => {
-            const newTopics = [...prev, ...fixedObjects];
-            // If this is the first topic, we can stop showing the loading state
-            if (newTopics.length === 1) {
-              setIsLoading(false);
-            }
-            return newTopics;
-          });
-          
-          // Clear processed objects from buffer
-          buffer = buffer.substring(buffer.lastIndexOf('}') + 1);
+          setTopics(prev => [...prev, ...fixedObjects]);
         }
       }
+      
+      // Update last fetched page and loading states
+      lastFetchedPage.current = page;
+      setIsLoading(false);
+      
     } catch (error) {
-      console.error('Error processing stream:', error);
+      console.error('Error fetching content:', error);
       setError('Failed to load topics. Please try again.');
+      setIsLoading(false);
     } finally {
-      setIsStreaming(false);
       setIsFetchingNext(false);
-      // Only set isLoading to false if we haven't received any topics yet
-      if (topics.length === 0) {
-        setIsLoading(false);
-      }
     }
   };
 
   // Initial fetch
   useEffect(() => {
-    processStream(1);
-  }, []);
+    // Clear existing data when language changes
+    setTopics([]);
+    setIsLoading(true);
+    setError(null);
+    lastFetchedPage.current = 0;
+    fetchContent(1);
+  }, [language]);
 
   // Check if we need to prefetch more content when the current index changes
   useEffect(() => {
     // Only check for prefetching when the current index changes
-    if (hasMore && !isFetchingNext && !isStreaming && topics.length > 0) {
+    if (hasMore && !isFetchingNext && topics.length > 0) {
       // If we're approaching the end, fetch the next page
       if (currentIndex >= topics.length - PREFETCH_THRESHOLD) {
-        setIsFetchingNext(true);
-        processStream(lastFetchedPage.current + 1);
+        fetchContent(lastFetchedPage.current + 1);
       }
     }
-  }, [currentIndex]);
-
-  // Add a new effect to proactively prefetch content
-  useEffect(() => {
-    // Start prefetching when we have at least one topic loaded
-    if (topics.length > 0 && hasMore && !isFetchingNext && !isStreaming) {
-      // Calculate how many topics we have left before we need more
-      const topicsLeft = topics.length - currentIndex;
-      
-      // If we're getting close to the end, prefetch more content
-      if (topicsLeft <= PREFETCH_THRESHOLD + 2) {
-        setIsFetchingNext(true);
-        processStream(lastFetchedPage.current + 1);
-      }
-    }
-  }, [topics.length, currentIndex, hasMore, isFetchingNext, isStreaming]);
+  }, [currentIndex, hasMore, isFetchingNext, topics.length]);
 
   useEffect(() => {
     // Set initial window dimensions
@@ -380,7 +329,7 @@ export default function FeedPage() {
               setTopics([]);
               setHasMore(true);
               lastFetchedPage.current = 0;
-              processStream(1);
+              fetchContent(1);
             }}
             className="px-4 py-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
           >
@@ -463,11 +412,11 @@ export default function FeedPage() {
         <BottomNav />
       </motion.div>
 
-      <ChatModal
+      {isChatOpen && <ChatModal
         topic={currentTopic}
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
-      />
+      />}
     </>
   );
 }
