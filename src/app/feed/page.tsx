@@ -9,8 +9,6 @@ import { useSwipeable } from 'react-swipeable'
 import ChatModal from '@/components/ChatModal'
 import { useLanguage } from '@/contexts/LanguageContext';
 
-const PREFETCH_THRESHOLD = 3; // Start fetching when 3 items away from the end
-
 export default function FeedPage() {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -18,116 +16,75 @@ export default function FeedPage() {
   const [isScrolling, setIsScrolling] = useState(false)
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 })
-  const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [hasMore, setHasMore] = useState(true)
-  const [isFetchingNext, setIsFetchingNext] = useState(false)
-  const lastFetchedPage = useRef(0)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
   const { language } = useLanguage();
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const SWIPE_THRESHOLD = 0.05; // Lower threshold from 0.08 to 0.05 - just 5% of screen height
   const VELOCITY_THRESHOLD = 0.1; // More sensitive velocity detection (from 0.15 to 0.1)
 
+  console.log("currentIndex", currentIndex)
+
   // Calculate a more responsive non-linear drag position with less resistance
   const calculateDragWithResistance = (delta: number): number => {
     const maxDrag = windowDimensions.height;
     const sign = Math.sign(delta);
     const absValue = Math.min(Math.abs(delta), maxDrag);
-    
+
     // More responsive at the beginning, with even less resistance
     // Starts at 95% response, goes down to 60% at maximum drag
     const resistance = 0.95 - 0.35 * Math.pow(absValue / maxDrag, 1.25);
-    
+
     // Amplify small movements more - multiply small drags by up to 1.8x
     const amplifier = 1 + (0.8 * Math.max(0, 1 - absValue / (maxDrag * 0.25)));
-    
+
     return sign * (absValue * resistance * amplifier);
   };
 
   // Simplified fetch content function with better error handling
-  const fetchContent = async (page: number) => {
+  const fetchMoreContent = async () => {
+    // Prevent duplicate requests while one is in progress
+
     try {
-      setIsFetchingNext(true);
-      
+      setIsFetchingMore(true);
+
       const response = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ language }),
       });
-      
+
       if (!response.ok) throw new Error('Failed to fetch topics');
-      
+
       const data = await response.json();
-      
-      if (Array.isArray(data)) {
-        // Process topics if API returns formatted array directly
-        setTopics(prev => [...prev, ...data]);
-      } else if (data.content) {
-        // Process topics if API returns content string
-        const jsonObjects = data.content
-          .split('\n')
-          .filter((line: string) => line.trim())
-          .map((line: string) => {
-            try {
-              return JSON.parse(line.trim());
-            } catch (e) {
-              console.error('Failed to parse JSON:', e);
-              return null;
-            }
-          })
-          .filter(Boolean); // Remove any null values
-        
-        if (jsonObjects.length > 0) {
-          // Fix the property name issue - check for both "teaser" and "teteaser"
-          const fixedObjects = jsonObjects.map((obj: any) => {
-            if (obj.teteaser && !obj.teaser) {
-              return {
-                ...obj,
-                teaser: obj.teteaser,
-                teteaser: undefined
-              };
-            }
-            return obj;
-          });
-          
-          setTopics(prev => [...prev, ...fixedObjects]);
-        }
-      }
-      
+      // Process topics if API returns formatted array directly
+      setTopics(prev => [...prev, ...data]);
       // Update last fetched page and loading states
-      lastFetchedPage.current = page;
-      setIsLoading(false);
-      
     } catch (error) {
       console.error('Error fetching content:', error);
       setError('Failed to load topics. Please try again.');
-      setIsLoading(false);
     } finally {
-      setIsFetchingNext(false);
+      setIsFetchingMore(false);
     }
   };
 
-  // Initial fetch
   useEffect(() => {
-    // Clear existing data when language changes
-    setTopics([]);
-    setIsLoading(true);
-    setError(null);
-    lastFetchedPage.current = 0;
-    fetchContent(1);
-  }, [language]);
-
-  // Check if we need to prefetch more content when the current index changes
-  useEffect(() => {
-    // Only check for prefetching when the current index changes
-    if (hasMore && !isFetchingNext && topics.length > 0) {
-      // If we're approaching the end, fetch the next page
-      if (currentIndex >= topics.length - PREFETCH_THRESHOLD) {
-        fetchContent(lastFetchedPage.current + 1);
-      }
+    if (isFetchingMore) {
+      return
     }
-  }, [currentIndex, hasMore, isFetchingNext, topics.length]);
+
+    if (topics.length === 0) {
+      fetchMoreContent();
+      console.log("fetching more content initial")
+    }
+
+    if (currentIndex >= topics.length - 1 && topics.length > 0) {
+      console.log("fetching more content", currentIndex, topics.length)
+      fetchMoreContent();
+    }
+  }, [currentIndex, topics.length]);
 
   useEffect(() => {
     // Set initial window dimensions
@@ -149,19 +106,15 @@ export default function FeedPage() {
   }, []);
 
   const goToNext = () => {
-    if (currentIndex < topics.length - 1) {
-      setIsScrolling(true);
-      setDirection(1);
-      setCurrentIndex(currentIndex + 1);
-    }
+    setIsScrolling(true);
+    setDirection(1);
+    setCurrentIndex(currentIndex + 1);
   };
 
   const goToPrevious = () => {
-    if (currentIndex > 0) {
-      setIsScrolling(true);
-      setDirection(-1);
-      setCurrentIndex(currentIndex - 1);
-    }
+    setIsScrolling(true);
+    setDirection(-1);
+    setCurrentIndex(currentIndex - 1);
   };
 
   const onAnimationComplete = () => {
@@ -188,7 +141,7 @@ export default function FeedPage() {
     onSwipedUp: (e) => {
       const threshold = windowDimensions.height * SWIPE_THRESHOLD;
       const velocity = Math.abs(e.velocity);
-      
+
       if (Math.abs(e.deltaY) > threshold || velocity > VELOCITY_THRESHOLD) {
         goToNext();
       }
@@ -198,7 +151,7 @@ export default function FeedPage() {
     onSwipedDown: (e) => {
       const threshold = windowDimensions.height * SWIPE_THRESHOLD;
       const velocity = Math.abs(e.velocity);
-      
+
       if (Math.abs(e.deltaY) > threshold || velocity > VELOCITY_THRESHOLD) {
         goToPrevious();
       }
@@ -238,7 +191,7 @@ export default function FeedPage() {
     if (Math.abs((e.target as any).offsetY) > 10) {
       return;
     }
-    
+
     setIsChatOpen(true);
   };
 
@@ -252,24 +205,24 @@ export default function FeedPage() {
     center: {
       y: isDragging ? dragY : 0,
       rotate: isDragging ? dragY * 0.03 : 0, // Increased rotation effect for more visual feedback
-      opacity: isDragging 
-        ? 1 - Math.min(0.2, Math.abs(dragY) / windowDimensions.height) 
+      opacity: isDragging
+        ? 1 - Math.min(0.2, Math.abs(dragY) / windowDimensions.height)
         : 1,
-      scale: isDragging 
-        ? 1 - Math.min(0.08, Math.abs(dragY) / windowDimensions.height * 0.15) 
+      scale: isDragging
+        ? 1 - Math.min(0.08, Math.abs(dragY) / windowDimensions.height * 0.15)
         : 1,
       transition: {
-        y: { 
+        y: {
           type: "tween", // Changed from spring to tween for no bounce
           duration: 0.3, // Smooth transition duration
           ease: "easeOut" // Ease out for smooth stop
         },
-        rotate: { 
+        rotate: {
           type: "tween", // Changed from spring to tween
           duration: 0.3,
           ease: "easeOut"
         },
-        opacity: { duration: 0.08 }, 
+        opacity: { duration: 0.08 },
         scale: { duration: 0.08 },
       }
     },
@@ -279,14 +232,14 @@ export default function FeedPage() {
       opacity: 0,
       scale: 0.92,
       transition: {
-        y: { 
+        y: {
           type: "tween", // Changed from spring to tween for no bounce
           duration: 0.4, // Slightly longer duration for exit
           ease: "easeIn" // Ease in for smooth start
         },
-        rotate: { duration: 0.2 }, 
-        opacity: { duration: 0.12 }, 
-        scale: { duration: 0.12 }, 
+        rotate: { duration: 0.2 },
+        opacity: { duration: 0.12 },
+        scale: { duration: 0.12 },
       }
     })
   }
@@ -305,31 +258,17 @@ export default function FeedPage() {
     </div>
   );
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black flex items-center justify-center">
-        <div className="space-y-4 text-center">
-          <div className="w-8 h-8 border-2 border-white/10 border-t-white rounded-full animate-spin mx-auto" />
-          <p className="text-white/50">Loading topics...</p>
-        </div>
-        <BottomNav />
-      </div>
-    );
-  }
 
-  if (error || topics.length === 0) {
+  if (error) {
     return (
       <div className="fixed inset-0 bg-black flex items-center justify-center">
         <div className="space-y-4 text-center px-4">
-          <p className="text-white/70">{error || 'No topics available.'}</p>
-          <button 
+          <p className="text-white/70">{error}</p>
+          <button
             onClick={() => {
-              setIsLoading(true);
               setError(null);
               setTopics([]);
               setHasMore(true);
-              lastFetchedPage.current = 0;
-              fetchContent(1);
             }}
             className="px-4 py-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
           >
@@ -369,8 +308,8 @@ export default function FeedPage() {
         </div>
 
         {/* Main content */}
-        <main 
-          className="h-screen w-full flex items-center justify-center overflow-hidden" 
+        <main
+          className="h-screen w-full flex items-center justify-center overflow-hidden"
           {...handlers}
           style={{ touchAction: 'none' }}
         >
@@ -385,7 +324,7 @@ export default function FeedPage() {
               onAnimationComplete={onAnimationComplete}
               className={`w-full max-w-lg px-6 absolute ${isDragging ? 'touch-none' : ''}`}
             >
-              {isFetchingNext && currentIndex >= topics.length - PREFETCH_THRESHOLD ? (
+              {!currentTopic ? (
                 <LoadingReel />
               ) : (
                 <div
@@ -412,11 +351,11 @@ export default function FeedPage() {
         <BottomNav />
       </motion.div>
 
-      {isChatOpen && <ChatModal
+      <ChatModal
         topic={currentTopic}
         isOpen={isChatOpen}
         onClose={() => setIsChatOpen(false)}
-      />}
+      />
     </>
   );
 }

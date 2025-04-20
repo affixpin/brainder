@@ -12,12 +12,12 @@ interface ChatModalProps {
   onClose: () => void;
 }
 
-export default function ChatModal({ topic, onClose }: ChatModalProps) {
+export default function ChatModal({ topic, onClose, isOpen }: ChatModalProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const { language } = useLanguage();
 
-  const { messages, input, handleInputChange, handleSubmit, append } =
+  const { messages, input, handleInputChange, handleSubmit, append, status } =
     useChat({
       api: "/api/chat",
       body: {
@@ -29,14 +29,20 @@ export default function ChatModal({ topic, onClose }: ChatModalProps) {
   const topicText = JSON.stringify(topic);
 
   useEffect(() => {
-    console.log("HERE!!!!", topicText)
+    if (!isOpen) {
+      return;
+    }
     append({
       role: 'user',
       content: JSON.stringify(topicText)
     });
-  }, []);
+  }, [isOpen]);
 
   const meesagesWithoutExplainPrompt = messages.slice(1);
+
+  if(!isOpen) {
+    return null;
+  }
 
   return (
     <AnimatePresence>
