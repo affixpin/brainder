@@ -40,6 +40,16 @@ export default function ChatModal({ topic, onClose, isOpen }: ChatModalProps) {
 
   const meesagesWithoutExplainPrompt = messages.slice(1);
 
+  // Prevent wheel events from propagating to parent
+  const handleWheel = (e: React.WheelEvent) => {
+    e.stopPropagation();
+  };
+
+  // Prevent touch events from propagating
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.stopPropagation();
+  };
+
   if(!isOpen) {
     return null;
   }
@@ -56,6 +66,9 @@ export default function ChatModal({ topic, onClose, isOpen }: ChatModalProps) {
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.2}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
         onDragEnd={(e, { offset, velocity }) => {
           if (offset.x > 50 || velocity.x > 500) {
             onClose();
@@ -80,7 +93,12 @@ export default function ChatModal({ topic, onClose, isOpen }: ChatModalProps) {
         </div>
 
         {/* Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 mb-[72px]">
+        <div 
+          className="flex-1 overflow-y-auto p-4 space-y-4 mb-[72px]"
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={(e) => e.stopPropagation()}
+        >
           {meesagesWithoutExplainPrompt.map((message, index) => (
             <div
               key={index}
