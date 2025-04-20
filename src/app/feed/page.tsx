@@ -17,7 +17,6 @@ export default function FeedPage() {
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 })
   const [error, setError] = useState<string | null>(null)
-  const [hasMore, setHasMore] = useState(true)
   const [isFetchingMore, setIsFetchingMore] = useState(false)
   const { language } = useLanguage();
   const [dragY, setDragY] = useState(0);
@@ -53,7 +52,10 @@ export default function FeedPage() {
       const response = await fetch('/api/feed', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ language }),
+        body: JSON.stringify({ 
+          language,
+          existingTopics: topics.map(topic => topic.title) 
+        }),
       });
 
       if (!response.ok) throw new Error('Failed to fetch topics');
@@ -268,7 +270,6 @@ export default function FeedPage() {
             onClick={() => {
               setError(null);
               setTopics([]);
-              setHasMore(true);
             }}
             className="px-4 py-2 bg-white/10 rounded-full text-white hover:bg-white/20 transition-colors"
           >

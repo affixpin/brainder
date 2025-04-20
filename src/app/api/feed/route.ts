@@ -2,7 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateText } from "ai";
 import { getModel } from "@/lib/models";
 
-const getSystemPrompt = (language: string) => `You are an expert science communicator and writer for a short-form educational platform. Your task is to generate **high-impact, scientifically accurate micro-facts** — each one like a short "text-based Reel" designed to immediately grab attention.
+const getSystemPrompt = (language: string, existingTopics: string[] = []) => {
+  const existingTopicsSection = existingTopics.length > 0 
+    ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${existingTopics.map(title => `- "${title}"`).join('\n')}`
+    : '';
+
+  return `You are an expert science communicator and writer for a short-form educational platform. Your task is to generate **high-impact, scientifically accurate micro-facts** — each one like a short "text-based Reel" designed to immediately grab attention.
 
 Each fact must follow these strict rules:
 1. **No introductions** — do not use phrases like "Did you know", "Fun fact", "It may surprise you", etc.  
@@ -15,7 +20,7 @@ Each fact must follow these strict rules:
 8. **Style matters** — this is for a modern audience who scrolls quickly. You only have 2 seconds to earn their attention. No fluff.
 9. **No repetition** — do not include any facts that have already been shown earlier in this conversation.
 10. Avoid sounding like an encyclopedia — your goal is to **evoke wonder** and **hook the user's attention**.
-11. Keep your tone **friendly, slightly playful, and intellectually stimulating**.
+11. Keep your tone **friendly, slightly playful, and intellectually stimulating**.${existingTopicsSection}
 
 **Example fact:**  
 "Each time you recall a memory, your brain subtly rewrites it. Over time, you might remember the story you've told — not the event itself."
@@ -37,12 +42,13 @@ Make sure:
 4. No additional text before or after the JSON objects
 
 You MUST respond in ${language}.`;
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { language } = await request.json();
+    const { language, existingTopics = [] } = await request.json();
 
-    const systemPrompt = getSystemPrompt(language);
+    const systemPrompt = getSystemPrompt(language, existingTopics);
 
     // Generate text using the preferred model (defaults to OpenAI)
     const { text } = await generateText({
@@ -55,7 +61,12 @@ export async function POST(request: NextRequest) {
 
     const content = text.split('\n').map(line => JSON.parse(line));
 
-    return NextResponse.json(content);
+    // Additional check to filter out any duplicates that might have slipped through
+    const filteredContent = content.filter(topic => 
+      !existingTopics.includes(topic.title)
+    );
+
+    return NextResponse.json(filteredContent);
   } catch (error) {
     console.error('Error generating feed content:', error);
     return NextResponse.json(
