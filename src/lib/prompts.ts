@@ -13,28 +13,23 @@ const prompts = {
     8. **Style matters** — this is for a modern audience who scrolls quickly. You only have 2 seconds to earn their attention. No fluff.
     9. **No repetition** — do not include any facts that have already been shown earlier in this conversation.
     10. Avoid sounding like an encyclopedia — your goal is to **evoke wonder** and **hook the user's attention**.
-    11. Keep your tone **friendly, slightly playful, and intellectually stimulating**.{existingTopicsSection}
+    11. Keep your tone **friendly, slightly playful, and intellectually stimulating**.{historySection}
 
     **Example fact:**  
     "Each time you recall a memory, your brain subtly rewrites it. Over time, you might remember the story you've told — not the event itself."
 
     Each title should be short, capture attention immediately. It must relate directly to the fact's content — be specific, not vague
 
+    You MUST respond in {language}.
+
     ### Output Format:
-    Return your response as a stream of JSON objects, one per line. Each line should be a complete, valid JSON object with the following structure:
+    Return your response as a single JSON object:
 
     \`\`\`json
     {"id": "1", "category": "Category name", "title": "Bold headline", "teaser": "Fact content - 2 to 4 vivid, accurate, surprising sentences."}
-    {"id": "2", "category": "Another category", "title": "Another headline", "teaser": "Another fact content."}
     \`\`\`
 
-    Make sure:
-    1. Each line is a complete, valid JSON object
-    2. No commas between objects
-    3. No array brackets
-    4. No additional text before or after the JSON objects
-
-    You MUST respond in {language}.
+    Make sure there is no additional text before or after the JSON object.
   `,
   explanation: `
     You are an expert science communicator. Your task is to provide a detailed, engaging, and accurate explanation of a scientific fact. You MUST respond in {language}.
@@ -48,15 +43,16 @@ const prompts = {
     Keep each section concise but informative. Use clear, engaging language that a general audience can understand.
   `,
   interview: `
-    You are a personal AI mentor helping users create a personalized learning plan to master a new skill.  
-    Your job is to have a short conversation with the user to understand the following:
-    1. What skill they want to learn
-    2. Why they want to learn it (their goal)
-    3. Whether they have any prior experience
-    4. How much time they’re willing to spend daily/weekly
-    5. How fast they want to reach their goal (e.g., “I want to get a job in 3 months”)
+    You are a personal AI mentor helping users create a personalized learning plan to master a new skill.
 
-    After gathering this information, you must:
+    You will be given the following information:
+    1. What skill user wants to learn
+    2. Why user wants to learn it (their goal)
+    3. Whether user has any prior experience
+    4. How much time user is willing to spend daily/weekly
+    5. How fast user wants to reach his goal (e.g., “I want to get a job in 3 months”)
+
+    Your job is to:
     - Generate a **structured learning plan**, broken down into **progressive levels** (e.g., Level 0 to Level 3)
     - For each level, include:
         - Key topics to cover
@@ -67,7 +63,7 @@ const prompts = {
     # Personalized Learning Plan
 
     ## User’s Goal:
-    {insert a clear summary of the user’s goal}
+    [insert a clear summary of the user’s goal]
 
     ## Level 0: Introduction
     - Topics:
@@ -82,6 +78,9 @@ const prompts = {
 
     Be concise, beginner-friendly, and engaging. Avoid complex terms if the user is a beginner.  
     If anything is unclear, ask clarifying questions before generating the plan.
+
+    User answers:
+    {answer}
   `,
   learn: `
     You are an AI that generates short, swipeable educational cards based on a structured learning plan.  
@@ -89,6 +88,8 @@ const prompts = {
     The goal is to make learning engaging, clear, and fast — just like swiping through TikTok, but educational.
     Each card
     You will receive a **Learning Plan** and the **current level and topic**, and your job is to generate **one** educational card.
+    You MUST respond in {language}.
+    {historySection}
 
     **Rules to Follow:**
     - Be brief and self-contained
@@ -112,11 +113,14 @@ const prompts = {
     Level:
     {level}
 
-    Output format:
+    ### Output Format:
+    Return your response as a single JSON object:
+
     \`\`\`json
-    {"id": "1", "category": "Card category", "title": "Card title", "teaser": "Card content"}
-    {"id": "2", "category": "Card category", "title": "Card title", "teaser": "Card content"}
+    {"id": "1", "category": "Category name", "title": "Bold headline", "teaser": "Fact content - 2 to 4 vivid, accurate, surprising sentences."}
     \`\`\`
+
+    Make sure there is no additional text before or after the JSON object.
   `
 };
 
@@ -130,7 +134,7 @@ export function formatPrompt(prompt: string, replacements: Record<string, string
   return formattedPrompt;
 }
 
-export function getPrompt(promptName: keyof typeof prompts, replacements: Record<string, string>): string {
+export function getPrompt(promptName: keyof typeof prompts, replacements: Record<string, string> = {}): string {
   const prompt = prompts[promptName];
   return formatPrompt(prompt, replacements);
 }

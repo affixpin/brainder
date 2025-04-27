@@ -3,9 +3,9 @@ import { generateText } from "ai";
 import { getModel } from "@/lib/models";
 import { getPrompt } from '@/lib/prompts';
 
-const getSystemPrompt = (language: string, search: string, existingTopics: string[] = []) => {
-  const existingTopicsSection = existingTopics.length > 0 
-    ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${existingTopics.map(title => `- "${title}"`).join('\n')}`
+const getSystemPrompt = (language: string, search: string, history: string[] = []) => {
+  const historySection = history.length > 0 
+    ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${history.map(title => `- "${title}"`).join('\n')}`
     : '';
   
   const themeSection = search
@@ -14,34 +14,27 @@ const getSystemPrompt = (language: string, search: string, existingTopics: strin
   
   return getPrompt('discover', {
     language,
-    existingTopicsSection,
+    historySection,
     themeSection
   });
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { language, search, existingTopics = [] } = await request.json();
+    const { language = 'English', search, history = [] } = await request.json();
 
-    const systemPrompt = getSystemPrompt(language, search, existingTopics);
+    const systemPrompt = getSystemPrompt(language, search, history);
 
     // Generate text using the preferred model (defaults to OpenAI)
     const { text } = await generateText({
       model: getModel(),
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: "Generate 5 facts in the specified JSON format. Each fact should be a separate JSON object on a new line." }
+        { role: 'user', content: "Generate 1 fact in the specified JSON format." }
       ],
     });
 
-    const content = text.split('\n').map(line => JSON.parse(line));
-
-    // Additional check to filter out any duplicates that might have slipped through
-    const filteredContent = content.filter(topic => 
-      !existingTopics.includes(topic.title)
-    );
-
-    return NextResponse.json(filteredContent);
+    return NextResponse.json(JSON.parse(text));
   } catch (error) {
     console.error('Error generating feed content:', error);
     return NextResponse.json(

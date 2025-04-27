@@ -1,6 +1,6 @@
 import { languages } from '@/data/languages';
 
-const LANGUAGE_STORAGE_KEY = 'antitok_preferred_language';
+const LANGUAGE_STORAGE_KEY = 'brainder_preferred_language';
 
 export const getStoredLanguage = (): string => {
   // Check if we're in a browser environment

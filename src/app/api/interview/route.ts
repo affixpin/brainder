@@ -1,29 +1,24 @@
-import { streamText } from 'ai';
+import { generateText } from 'ai';
 import { getModel } from '@/lib/models';
 import { getPrompt } from '@/lib/prompts';
+import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
   try {
-    const { messages = [], language = 'English' } = await req.json();
+    const { answer } = await req.json();
 
     // Get the explanation prompt and format it with the language
-    const systemPrompt = getPrompt('interview', { language });
+    const systemPrompt = getPrompt('interview', { answer });
 
-    // Ensure system prompt with correct language is included
-    const systemMessage = {
-      role: 'system',
-      content: systemPrompt
-    };
-
-    const allMessages = [systemMessage, ...messages];
-
-    // Use streamText from ai package
-    const result = await streamText({
+    // Generate text using the preferred model (defaults to OpenAI)
+    const { text } = await generateText({
       model: getModel(),
-      messages: allMessages,
+      messages: [
+        { role: 'system', content: systemPrompt },
+      ],
     });
 
-    return result.toDataStreamResponse();
+    return NextResponse.json({ learningPlan: text });
   } catch (error) {
     console.error('API route error:', error);
     return new Response(
