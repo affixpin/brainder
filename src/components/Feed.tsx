@@ -1,7 +1,7 @@
 'use client';
 
 import { Topic } from '@/types/api'
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useSwipeable } from 'react-swipeable'
 import { Search } from 'lucide-react'
@@ -24,65 +24,51 @@ export default function Feed({ onLoadMore }: FeedProps) {
   const [isFetchingMore, setIsFetchingMore] = useState(false)
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const SWIPE_THRESHOLD = 0.05; // Lower threshold from 0.08 to 0.05 - just 5% of screen height
-  const VELOCITY_THRESHOLD = 0.1; // More sensitive velocity detection (from 0.15 to 0.1)
+  const hasInitialized = useRef(false);
+  const SWIPE_THRESHOLD = 0.05;
+  const VELOCITY_THRESHOLD = 0.1;
 
-  // Calculate a more responsive non-linear drag position with less resistance
   const calculateDragWithResistance = (delta: number): number => {
     const maxDrag = windowDimensions.height;
     const sign = Math.sign(delta);
     const absValue = Math.min(Math.abs(delta), maxDrag);
-
-    // More responsive at the beginning, with even less resistance
-    // Starts at 95% response, goes down to 60% at maximum drag
     const resistance = 0.95 - 0.35 * Math.pow(absValue / maxDrag, 1.25);
-
-    // Amplify small movements more - multiply small drags by up to 1.8x
     const amplifier = 1 + (0.8 * Math.max(0, 1 - absValue / (maxDrag * 0.25)));
-
     return sign * (absValue * resistance * amplifier);
   };
 
-  const fetchMoreContent = async () => {
+  const fetchMoreContent = useCallback(async () => {
+    if (isFetchingMore) return;
+    
     try {
       setIsFetchingMore(true);
-
       const data = await onLoadMore();
-
       setTopics(prev => [...prev, data]);
-
     } catch (error) {
       console.error('Error fetching content:', error);
       setError('Failed to load topics. Please try again.');
     } finally {
       setIsFetchingMore(false);
     }
-  };
+  }, [onLoadMore, isFetchingMore]);
 
+  // Initial load
   useEffect(() => {
-    if (isFetchingMore) {
-      return
-    }
-
-    if (topics.length === 0) {
+    if (!hasInitialized.current && topics.length === 0) {
+      hasInitialized.current = true;
       fetchMoreContent();
-      console.log("fetching more content initial")
     }
+  }, [fetchMoreContent]);
 
+  // Prefetch effect
+  useEffect(() => {
     if (currentIndex >= topics.length - PREFETCH_THRESHOLD && topics.length > 0) {
-      console.log("fetching more content", currentIndex, topics.length)
       fetchMoreContent();
     }
-  }, [currentIndex, topics.length]);
+  }, [currentIndex, topics.length, fetchMoreContent]);
 
+  // Window dimensions effect
   useEffect(() => {
-    // Set initial window dimensions
-    setWindowDimensions({
-      width: window.innerWidth,
-      height: window.innerHeight
-    });
-
-    // Update dimensions on resize
     const handleResize = () => {
       setWindowDimensions({
         width: window.innerWidth,
@@ -90,41 +76,41 @@ export default function Feed({ onLoadMore }: FeedProps) {
       });
     };
 
+    handleResize();
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     setIsScrolling(true);
     setDirection(1);
-    setCurrentIndex(currentIndex + 1);
-  };
+    setCurrentIndex(prev => prev + 1);
+  }, []);
 
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     setIsScrolling(true);
     setDirection(-1);
-    setCurrentIndex(currentIndex - 1);
-  };
-
-  const onAnimationComplete = () => {
-    setIsScrolling(false)
-  }
+    setCurrentIndex(prev => prev - 1);
+  }, []);
 
   const handleWheel = useCallback((e: WheelEvent) => {
-    // More sensitive wheel handling
-    if (!isDragging && Math.abs(e.deltaY) > 1) { // Lower threshold from 3 to 1 for higher sensitivity
+    if (!isDragging && Math.abs(e.deltaY) > 1) {
       if (e.deltaY > 0) {
         goToPrevious();
       } else {
         goToNext();
       }
     }
-  }, [currentIndex, isScrolling, isDragging]);
+  }, [isDragging, goToNext, goToPrevious]);
 
   useEffect(() => {
-    window.addEventListener('wheel', handleWheel, { passive: true })
-    return () => window.removeEventListener('wheel', handleWheel)
-  }, [handleWheel])
+    window.addEventListener('wheel', handleWheel, { passive: true });
+    return () => window.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  const onAnimationComplete = () => {
+    setIsScrolling(false)
+  }
 
   const handlers = useSwipeable({
     onSwipedUp: (e) => {

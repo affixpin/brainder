@@ -6,7 +6,7 @@ import { motion } from 'framer-motion'
 import { useLanguage } from '@/contexts/LanguageContext';
 import Feed from '@/components/Feed';
 import { getStoredReels, setStoredReels } from '@/utils/reelsUtils';
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2 } from 'lucide-react';
 
 export default function LearnPage() {
@@ -56,7 +56,7 @@ export default function LearnPage() {
     }
   };
 
-  const fetchMoreContent = async (): Promise<Topic> => {
+  const fetchMoreContent = useCallback(async (): Promise<Topic> => {
     const response = await fetch('/api/learn', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -64,18 +64,17 @@ export default function LearnPage() {
         language,
         history: history.map(topic => topic.title),
         learningPlan,
-        level: 0 // TODO
+        level: 0
       }),
     });
 
     if (!response.ok) throw new Error('Failed to fetch topics');
 
     const newTopic = await response.json();
-
     setStoredReels('brainder_learn_history', [...history, newTopic]);
     setHistory(prev => [...prev, newTopic]);
     return newTopic;
-  };
+  }, [language, history, learningPlan]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
