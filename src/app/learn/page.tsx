@@ -157,7 +157,9 @@ export default function LearnPage() {
           </div>
         </div>
       ) : (
-        <Feed onLoadMore={fetchMoreContent} key={feedKey} />
+        <div className="h-[calc(100vh-128px)] flex items-center">
+          <Feed onLoadMore={fetchMoreContent} key={feedKey} />
+        </div>
       )}
       
       <BottomNav />
