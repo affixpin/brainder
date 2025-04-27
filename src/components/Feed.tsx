@@ -10,7 +10,7 @@ import ChatModal from '@/components/ChatModal'
 const PREFETCH_THRESHOLD = 2;
 
 interface FeedProps {
-  onLoadMore: (searchQuery: string) => Promise<Topic>;
+  onLoadMore: () => Promise<Topic>;
 }
 
 export default function Feed({ onLoadMore }: FeedProps) {
@@ -24,7 +24,6 @@ export default function Feed({ onLoadMore }: FeedProps) {
   const [isFetchingMore, setIsFetchingMore] = useState(false)
   const [dragY, setDragY] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const SWIPE_THRESHOLD = 0.05; // Lower threshold from 0.08 to 0.05 - just 5% of screen height
   const VELOCITY_THRESHOLD = 0.1; // More sensitive velocity detection (from 0.15 to 0.1)
 
@@ -48,7 +47,7 @@ export default function Feed({ onLoadMore }: FeedProps) {
     try {
       setIsFetchingMore(true);
 
-      const data = await onLoadMore(searchQuery);
+      const data = await onLoadMore();
 
       setTopics(prev => [...prev, data]);
 
@@ -185,13 +184,6 @@ export default function Feed({ onLoadMore }: FeedProps) {
     setIsChatOpen(true);
   };
 
-  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setTopics([]);
-    setCurrentIndex(0);
-    fetchMoreContent();
-  };
-
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? windowDimensions.height : -windowDimensions.height,
@@ -279,30 +271,6 @@ export default function Feed({ onLoadMore }: FeedProps) {
 
   return (
     <>
-      {/* Search header */}
-      <div className="absolute top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-white/10 px-3 py-2.5 z-50">
-        <form onSubmit={handleSearch} className="flex items-center gap-2 max-w-lg mx-auto">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-white/50" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search topics"
-              className="w-full bg-[#222222] rounded-full py-2 pl-10 pr-4 text-[15px] text-white placeholder:text-white/50 focus:outline-none focus:bg-[#333333]"
-            />
-          </div>
-          <button
-            type="submit"
-            className="p-1.5 hover:bg-white/10 rounded-full transition-colors"
-            aria-label="Search"
-          >
-            <Search className="w-5 h-5 text-white" />
-          </button>
-        </form>
-      </div>
-
-      {/* Main content */}
       <main
         className="h-screen w-full flex items-center justify-center overflow-hidden"
         {...handlers}

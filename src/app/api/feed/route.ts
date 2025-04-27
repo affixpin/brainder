@@ -5,7 +5,7 @@ import { getPrompt } from '@/lib/prompts';
 
 const getSystemPrompt = (language: string, search: string, history: string[] = []) => {
   const historySection = history.length > 0 
-    ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${history.map(title => `- "${title}"`).join('\n')}`
+    ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${history.join(';')}`
     : '';
   
   const themeSection = search
