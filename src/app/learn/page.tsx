@@ -26,6 +26,7 @@ export default function LearnPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [userMessage, setUserMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const learningPlan = localStorage.getItem(LEARNING_PLAN_STORAGE_KEY);
@@ -59,12 +60,26 @@ export default function LearnPage() {
     }
   };
 
+  const resetTextareaHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = '44px'; // match min-height
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (input.trim() && !isLoading) {
       setUserMessage(input.trim());
       getLearningPlan(input.trim());
+      setInput('');
+      resetTextareaHeight();
     }
+  };
+
+  const handleTextareaInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    const target = e.target as HTMLTextAreaElement;
+    target.style.height = '44px'; // Reset height first
+    target.style.height = `${target.scrollHeight}px`;
   };
 
   const fetchMoreContent = useCallback(async (): Promise<Topic> => {
@@ -98,7 +113,6 @@ export default function LearnPage() {
     cleanStoredReels('brainder_learn_history');
     setLearningPlan('');
     setHistory([]);
-    setInput('');
     setUserMessage(null);
     setShowFeed(false);
   }
@@ -112,7 +126,18 @@ export default function LearnPage() {
     >
       {/* Header */}
       <div className="bg-black/95 backdrop-blur-sm border-b border-white/10 px-4 py-4">
-        <h1 className="text-xl font-semibold text-white">Learn</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-white">Learn</h1>
+          {showFeed && (
+            <button
+              onClick={cleanData}
+              className="px-4 py-1.5 text-sm font-medium text-white bg-white/10 rounded-full hover:bg-white/20 transition-all"
+              aria-label="Start new learning plan"
+            >
+              New
+            </button>
+          )}
+        </div>
       </div>
 
       {!showFeed ? (
@@ -122,7 +147,15 @@ export default function LearnPage() {
             <div className="flex justify-start">
               <div className="max-w-[95%] rounded-2xl px-4 py-2 bg-white/10 text-white rounded-bl-sm">
                 <div className="whitespace-pre-wrap break-words">
-                  What would you like to learn about?
+                  <p className="text-white/90 text-lg">Before we get started, please answer a few questions:</p>
+                  <br/>
+                  <div className="space-y-2">
+                    <p>1. What skill would you like to learn?</p>
+                    <p>2. Why do you want to learn it? (your goal)</p>
+                    <p>3. Do you have any prior experience with this skill?</p>
+                    <p>4. How much time can you spend on it daily or weekly?</p>
+                    <p>5. How fast do you want to reach your goal? <span className="text-white/70">(e.g., "I want to get a job in 3 months")</span></p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -153,19 +186,31 @@ export default function LearnPage() {
           {/* Input area */}
           <div className="fixed bottom-[72px] left-0 right-0 bg-black border-t border-white/10">
             <form onSubmit={handleSubmit} className="p-4">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
+              <div className="flex items-end gap-2">
+                <textarea
+                  ref={textareaRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   placeholder="Type your answer..."
                   disabled={isLoading}
-                  className="flex-1 bg-white/10 rounded-full px-4 py-2 text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 disabled:opacity-50"
+                  rows={1}
+                  className="flex-1 bg-white/10 rounded-2xl px-4 py-3 text-white placeholder:text-white/50 focus:outline-none focus:bg-white/20 disabled:opacity-50 resize-none min-h-[44px] max-h-[160px] leading-[1.4]"
+                  style={{ 
+                    height: '44px',
+                    overflow: 'hidden'
+                  }}
+                  onInput={handleTextareaInput}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
                 />
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="p-2 disabled:opacity-50"
+                  className="p-2 h-[44px] flex items-center justify-center disabled:opacity-50"
                 >
                   {isLoading ? (
                     <Loader2 className="w-6 h-6 text-white animate-spin" />
