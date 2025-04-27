@@ -294,16 +294,18 @@ export default function Feed({ onLoadMore }: FeedProps) {
                 className="block cursor-pointer"
                 onClick={handleTopicClick}
               >
-                <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
-                  {currentTopic.title}
-                </h1>
-                <div className="space-y-4">
-                  <span className="text-lg text-white/50 font-medium block">
-                    {currentTopic.category}
-                  </span>
-                  <p className="text-lg text-white/90 leading-relaxed font-light">
-                    {currentTopic.teaser}
-                  </p>
+                <div className="flex flex-col justify-center min-h-[calc(100vh-200px)]">
+                  <h1 className="text-4xl font-bold text-white mb-6 leading-tight">
+                    {currentTopic.title}
+                  </h1>
+                  <div className="space-y-4">
+                    <span className="text-lg text-white/50 font-medium block">
+                      {currentTopic.category}
+                    </span>
+                    <p className="text-lg text-white/90 leading-relaxed font-light">
+                      {currentTopic.teaser}
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
