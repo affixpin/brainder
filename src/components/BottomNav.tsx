@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, User, Settings } from 'lucide-react';
+import { Compass, User, BookOpen } from 'lucide-react';
 
 export default function BottomNav() {
   const pathname = usePathname();
@@ -16,18 +16,18 @@ export default function BottomNav() {
             pathname === '/feed' ? 'text-white' : 'text-white/50'
           }`}
         >
-          <Home className="w-6 h-6" />
-          <span className="text-xs">Home</span>
+          <Compass className="w-6 h-6" />
+          <span className="text-xs">Discover</span>
         </Link>
 
         <Link
-          href="/settings"
+          href="/learn"
           className={`flex flex-col items-center gap-1 p-2 ${
-            pathname === '/settings' ? 'text-white' : 'text-white/50'
+            pathname === '/learn' ? 'text-white' : 'text-white/50'
           }`}
         >
-          <Settings className="w-6 h-6" />
-          <span className="text-xs">Settings</span>
+          <BookOpen className="w-6 h-6" />
+          <span className="text-xs">Learn</span>
         </Link>
 
         <Link

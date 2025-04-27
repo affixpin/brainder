@@ -12,12 +12,12 @@ After gathering this information, you must:
     - Key topics to cover
     - Goals for that level (what the user should know or be able to do)
     - Example tasks or practice activities
+
 The final output must follow this format:
-```
 # Personalized Learning Plan
 
 ## User’s Goal:
-{insert a clear summary of the user’s goal}
+[insert a clear summary of the user’s goal]
 
 ## Level 0: Introduction
 - Topics:
@@ -29,6 +29,8 @@ The final output must follow this format:
 
 ## Level 1: ...
 ...
-```
+
 Be concise, beginner-friendly, and engaging. Avoid complex terms if the user is a beginner.  
 If anything is unclear, ask clarifying questions before generating the plan.
+
+You MUST respond in {language}.

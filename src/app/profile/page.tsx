@@ -2,11 +2,15 @@
 
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { User, Settings, Bell, Shield, HelpCircle, LogOut } from 'lucide-react';
+import { User, Globe, Bell, Shield, HelpCircle, LogOut } from 'lucide-react';
 import BottomNav from '@/components/BottomNav';
+import { languages } from '@/data/languages';
+import { useLanguage } from '@/contexts/LanguageContext';
 
 export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
+  const { language, setLanguage } = useLanguage();
 
   // Mock user data - in a real app, this would come from an API or context
   const user = {
@@ -17,9 +21,14 @@ export default function ProfilePage() {
     topicsSaved: 7
   };
 
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    setIsLanguageModalOpen(false);
+  };
+
   const menuItems = [
     { icon: <User className="w-5 h-5" />, label: 'Account Information', action: () => {} },
-    { icon: <Settings className="w-5 h-5" />, label: 'Preferences', action: () => {} },
+    { icon: <Globe className="w-5 h-5" />, label: 'Language', action: () => setIsLanguageModalOpen(true), value: language },
     { icon: <Bell className="w-5 h-5" />, label: 'Notifications', action: () => {} },
     { icon: <Shield className="w-5 h-5" />, label: 'Privacy & Security', action: () => {} },
     { icon: <HelpCircle className="w-5 h-5" />, label: 'Help & Support', action: () => {} },
@@ -80,14 +89,56 @@ export default function ProfilePage() {
             <button
               key={index}
               onClick={item.action}
-              className="w-full flex items-center gap-3 p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
+              className="w-full flex items-center justify-between p-4 bg-white/5 rounded-xl hover:bg-white/10 transition-colors"
             >
-              <div className="text-white/70">{item.icon}</div>
-              <span className="text-white">{item.label}</span>
+              <div className="flex items-center gap-3">
+                <div className="text-white/70">{item.icon}</div>
+                <span className="text-white">{item.label}</span>
+              </div>
+              {item.value && <span className="text-white/50">{item.value}</span>}
             </button>
           ))}
         </motion.div>
       </div>
+
+      {/* Language Selection Modal */}
+      {isLanguageModalOpen && (
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center"
+          onClick={() => setIsLanguageModalOpen(false)}
+        >
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            className="bg-black border border-white/10 rounded-xl w-full max-w-md mx-4 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-white/10">
+              <h2 className="text-xl font-semibold text-white">Select Language</h2>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto">
+              {languages.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => handleLanguageChange(lang)}
+                  className={`w-full p-4 text-left flex items-center justify-between ${
+                    language === lang ? 'bg-white/10' : 'hover:bg-white/5'
+                  }`}
+                >
+                  <span className="text-white">{lang}</span>
+                  {language === lang && (
+                    <div className="w-2 h-2 rounded-full bg-blue-500" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
 
       <BottomNav />
     </div>

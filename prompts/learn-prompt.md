@@ -21,20 +21,15 @@ You will receive a **Learning Plan** and the **current level and topic**, and yo
     Use analogies, metaphors, or simplifications where possible — without compromising accuracy.
 
 Learning plan:
-```
-[PASTE LEARNING PLAN HERE]
-```
+{learningPlan}
 
 Level:
-```
-[PASTE LEVEL HERE]
-```
+{level}
 
 Output format:
+```json
+{"id": "1", "category": "Card category", "title": "Card title", "teaser": "Card content"}
+{"id": "2", "category": "Card category", "title": "Card title", "teaser": "Card content"}
 ```
-# Topic:
-[TOPIC]
 
-# Card:
-[Generated short educational card]
-```
+You MUST respond in {language}.

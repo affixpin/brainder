@@ -7,7 +7,7 @@ export async function POST(req: Request) {
     const { messages = [], language = 'English' } = await req.json();
 
     // Get the explanation prompt and format it with the language
-    const systemPrompt = getPrompt('explanation', { language });
+    const systemPrompt = getPrompt('interview', { language });
 
     // Ensure system prompt with correct language is included
     const systemMessage = {

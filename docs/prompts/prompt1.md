@@ -1,1 +1,0 @@
-Let's change Feed page. I want it look exactly the same as topic page but without back button and keep the search bar
