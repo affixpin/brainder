@@ -5,9 +5,11 @@ import BottomNav from '@/components/BottomNav'
 import { motion } from 'framer-motion'
 import { useLanguage } from '@/contexts/LanguageContext';
 import Feed from '@/components/Feed';
-import { getStoredReels, setStoredReels } from '@/utils/reelsUtils';
+import { cleanStoredReels, getStoredReels, setStoredReels } from '@/utils/reelsUtils';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Send, Loader2 } from 'lucide-react';
+
+const LEARNING_PLAN_STORAGE_KEY = 'brainder_learning_plan';
 
 export default function LearnPage() {
   const [history, setHistory] = useState<Topic[]>(() => {
@@ -25,6 +27,14 @@ export default function LearnPage() {
   const [userMessage, setUserMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const learningPlan = localStorage.getItem(LEARNING_PLAN_STORAGE_KEY);
+    if (learningPlan) {
+      setLearningPlan(learningPlan);
+      setShowFeed(true);
+    }
+  }, []);
+
   const getLearningPlan = async (answer: string): Promise<void> => {
     setIsLoading(true);
     try {
@@ -36,11 +46,12 @@ export default function LearnPage() {
         }),
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setLearningPlan(data.learningPlan);
-        setShowFeed(true);
-      }
+      if (!response.ok) throw new Error('Failed to fetch topics');
+
+      const data = await response.json();
+      setLearningPlan(data.learningPlan);
+      setShowFeed(true);
+      localStorage.setItem(LEARNING_PLAN_STORAGE_KEY, data.learningPlan);
     } catch (error) {
       console.error('Error getting learning plan:', error);
     } finally {
@@ -81,6 +92,16 @@ export default function LearnPage() {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [userMessage]);
+
+  const cleanData = () => {
+    localStorage.removeItem(LEARNING_PLAN_STORAGE_KEY);
+    cleanStoredReels('brainder_learn_history');
+    setLearningPlan('');
+    setHistory([]);
+    setInput('');
+    setUserMessage(null);
+    setShowFeed(false);
+  }
 
   return (
     <motion.div
@@ -161,7 +182,7 @@ export default function LearnPage() {
           <Feed onLoadMore={fetchMoreContent} key={feedKey} />
         </div>
       )}
-      
+
       <BottomNav />
     </motion.div>
   );

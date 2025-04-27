@@ -28,3 +28,14 @@ export const setStoredReels = (storageKey: StorageKeyType, topics: Topic[]): voi
     console.error('Error saving reels history in localStorage:', error);
   }
 };
+
+export const cleanStoredReels = (storageKey: StorageKeyType): void => {
+   // Check if we're in a browser environment
+   if (typeof window === 'undefined') return;
+
+   try {
+    localStorage.removeItem(storageKey);
+  } catch (error) {
+    console.error('Error cleaning reels history in localStorage:', error);
+  }
+};
