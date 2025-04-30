@@ -13,7 +13,14 @@ const prompts = {
     8. **Style matters** — this is for a modern audience who scrolls quickly. You only have 2 seconds to earn their attention. No fluff.
     9. **No repetition** — do not include any facts that have already been shown earlier in this conversation.
     10. Avoid sounding like an encyclopedia — your goal is to **evoke wonder** and **hook the user's attention**.
-    11. Keep your tone **friendly, slightly playful, and intellectually stimulating**.{historySection}
+    11. Keep your tone **friendly, slightly playful, and intellectually stimulating**.
+
+    **Diversity Constraint**:  
+    The list under seen_topics contains topics that the user has already viewed.  
+    - You **must not** repeat any of them  
+    - You **must not** generate facts that are closely related in theme, subfield, or domain  
+    - Assume the user wants **variety** across disciplines — not deep dives into one area  
+    - Prefer choosing a **new, previously untouched area of science**
 
     **Example fact:**  
     "Each time you recall a memory, your brain subtly rewrites it. Over time, you might remember the story you've told — not the event itself."
@@ -22,14 +29,14 @@ const prompts = {
 
     You MUST respond in {language}.
 
+    **seen_topics**: {history}
+
     ### Output Format:
     Return your response as a single JSON object:
 
-    \`\`\`json
     {"id": "1", "category": "Category name", "title": "Bold headline", "teaser": "Fact content - 2 to 4 vivid, accurate, surprising sentences."}
-    \`\`\`
 
-    Make sure there is no additional text before or after the JSON object.
+    Make sure there is no additional text before or after the JSON object. Return a valid JSON object only. Escape all characters inside string values that could break JSON syntax, such as double quotes (") as \" and backslashes (\) as \\.
   `,
   explanation: `
     You are an expert science communicator. Your task is to provide a detailed, engaging, and accurate explanation of a scientific fact. You MUST respond in {language}.
@@ -89,7 +96,6 @@ const prompts = {
     Each card
     You will receive a **Learning Plan** and the **current level and topic**, and your job is to generate **one** educational card.
     You MUST respond in {language}.
-    {historySection}
 
     **Rules to Follow:**
     - Be brief and self-contained
@@ -97,7 +103,11 @@ const prompts = {
     - Fit in ~500 characters or less (shorter is better)
     - Be beginner-friendly, clear, and engaging
     - Optionally include a question, challenge, or example
-    - Avoid repeating information that have already been shown earlier in this conversation.
+
+    **Diversity Constraint**:  
+    The list under seen_topics contains topics that the user has already viewed. You **must not** repeat any of them
+
+    **seen_topics**: {history}
 
     **Structure of the Card Content:**
       - **Line 1: Attention Point**  
@@ -116,11 +126,9 @@ const prompts = {
     ### Output Format:
     Return your response as a single JSON object:
 
-    \`\`\`json
     {"id": "1", "category": "Category name", "title": "Bold headline", "teaser": "Fact content - 2 to 4 vivid, accurate, surprising sentences."}
-    \`\`\`
 
-    Make sure there is no additional text before or after the JSON object.
+    Make sure there is no additional text before or after the JSON object. Return a valid JSON object only. Escape all characters inside string values that could break JSON syntax, such as double quotes (") as \" and backslashes (\) as \\.
   `
 };
 

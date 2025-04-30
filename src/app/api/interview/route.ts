@@ -15,6 +15,7 @@ export async function POST(req: Request) {
       model: getModel(),
       messages: [
         { role: 'system', content: systemPrompt },
+        { role: 'user', content: "Generate learning plan based on the provided answer." }
       ],
     });
 

@@ -16,7 +16,7 @@ const provider = process.env.AI_PROVIDER || 'openai';
 // Get model based on preference or environment variable
 export function getModel() {
     if (provider === 'anthropic') {
-        return anthropic("claude-3-opus-20240229");
+        return anthropic("claude-3-7-sonnet-20250219");
     }
 
     return openai("gpt-4");

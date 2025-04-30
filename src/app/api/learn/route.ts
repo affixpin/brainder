@@ -11,15 +11,11 @@ type LearnSystemPromptType = {
 };
 
 const getSystemPrompt = ({ language, level, learningPlan, history }: LearnSystemPromptType) => {
-  const historySection = history.length > 0 
-    ? `\nIMPORTANT: Do NOT generate topics with these titles, as they've already been shown to the user:\n${history.map(title => `- "${title}"`).join('\n')}`
-    : '';
-  
   return getPrompt('learn', {
     language,
     level,
     learningPlan,
-    historySection
+    history: history.join(';'),
   });
 }
 

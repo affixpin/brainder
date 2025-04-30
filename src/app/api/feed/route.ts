@@ -4,17 +4,13 @@ import { getModel } from "@/lib/models";
 import { getPrompt } from '@/lib/prompts';
 
 const getSystemPrompt = (language: string, search: string, history: string[] = []) => {
-  const historySection = history.length > 0 
-    ? `\nIMPORTANT: Do NOT generate facts with these titles, as they've already been shown to the user:\n${history.join(';')}`
-    : '';
-  
   const themeSection = search
     ? `**Generate facts based on the following keyword** - ${search}`
-    : '**Cover a variety of fields** — such as astrophysics, quantum theory, evolution, neuroscience, ancient biology, etc.';
+    : '**Cover a variety of fields** — such as astrophysics, quantum theory, evolution, neuroscience, ancient biology, chemistry, math, etc.';
   
   return getPrompt('discover', {
     language,
-    historySection,
+    history: history.join(';'),
     themeSection
   });
 }
