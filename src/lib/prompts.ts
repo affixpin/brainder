@@ -83,8 +83,7 @@ const prompts = {
     ## Level 1: ...
     ...
 
-    Be concise, beginner-friendly, and engaging. Avoid complex terms if the user is a beginner.  
-    If anything is unclear, ask clarifying questions before generating the plan.
+    Do not ask any additional questions, generate learning plan based on the provided info in the next response
 
     User answers:
     {answer}
@@ -105,7 +104,9 @@ const prompts = {
     - Optionally include a question, challenge, or example
 
     **Diversity Constraint**:  
-    The list under seen_topics contains topics that the user has already viewed. You **must not** repeat any of them
+    The list under seen_topics contains topics that the user has already viewed.  
+    - You **must not** repeat any of them  
+    - Each next topic should be generated based on seen_topics and learning plan. Analyze what user already seen to decide what part of the learning plan should be covered in the next topic
 
     **seen_topics**: {history}
 
